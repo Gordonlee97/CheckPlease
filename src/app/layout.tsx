@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import type { ReactNode } from 'react'
 import { Inter, Playfair_Display } from 'next/font/google'
 import './globals.css'
 
