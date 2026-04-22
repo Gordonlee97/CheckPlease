@@ -6,11 +6,9 @@ import type { ScanResult } from '@/lib/types'
 const AZURE_API_VERSION = '2024-11-30'
 const AZURE_MODEL = 'prebuilt-receipt'
 
-// Fix 4: module-level Anthropic client
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 async function analyzeWithAzure(base64Image: string): Promise<ScanResult | null> {
-  // Fix 2: runtime guard for missing env vars
   const endpoint = process.env.AZURE_DI_ENDPOINT?.replace(/\/$/, '')
   const key = process.env.AZURE_DI_KEY
   if (!endpoint || !key) return null
@@ -46,7 +44,6 @@ async function analyzeWithAzure(base64Image: string): Promise<ScanResult | null>
 }
 
 async function analyzeWithClaude(base64Image: string): Promise<ScanResult | null> {
-  // Fix 4: use module-level anthropic client
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
@@ -73,12 +70,10 @@ Each item's price should be the full line total (quantity × unit price already 
       ],
     }],
   })
-  // Fix 3: safe optional chaining on content[0]
   const text = message.content[0]?.type === 'text' ? message.content[0].text : ''
   return parseClaudeResponse(text)
 }
 
-// Fix 1 & 5: wrap POST in try/catch for controlled 500 on unhandled errors
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
