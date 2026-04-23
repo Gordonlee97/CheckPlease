@@ -81,7 +81,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
             <div className="flex items-center gap-1 shrink-0">
               <span className="text-text-secondary text-sm">$</span>
               <Input
-                className="w-20 text-right"
+                className="w-16 text-right"
                 type="number"
                 step="0.01"
                 min="0"
