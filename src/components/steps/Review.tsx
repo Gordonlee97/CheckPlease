@@ -71,17 +71,26 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
       <div className="flex flex-col gap-2 mb-4">
         {items.map(item => (
-          <Card key={item.id} className="flex gap-2 items-center">
-            <Input
-              className="flex-1"
-              value={item.name}
-              onChange={e => updateItem(item.id, 'name', e.target.value)}
-              placeholder="Item name"
-            />
-            <div className="flex items-center gap-1 shrink-0">
+          <Card key={item.id} className="flex flex-col gap-2">
+            <div className="flex gap-2 items-center">
+              <Input
+                className="flex-1"
+                value={item.name}
+                onChange={e => updateItem(item.id, 'name', e.target.value)}
+                placeholder="Item name"
+              />
+              <button
+                onClick={() => removeItem(item.id)}
+                className="text-text-secondary hover:text-text-primary text-lg shrink-0"
+                aria-label="Remove item"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex items-center gap-1">
               <span className="text-text-secondary text-sm">$</span>
               <Input
-                className="w-20 text-right"
+                className="w-28 text-right"
                 type="number"
                 step="0.01"
                 min="0"
@@ -89,13 +98,6 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
                 onChange={e => updateItem(item.id, 'priceStr', e.target.value)}
               />
             </div>
-            <button
-              onClick={() => removeItem(item.id)}
-              className="text-text-secondary hover:text-text-primary text-lg shrink-0"
-              aria-label="Remove item"
-            >
-              ×
-            </button>
           </Card>
         ))}
       </div>
