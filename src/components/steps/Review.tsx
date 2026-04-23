@@ -111,7 +111,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
         {([
           { label: 'Tax', content: <Input type="number" step="0.01" min="0" value={tax} onChange={e => setTax(e.target.value)} className="text-right" /> },
           { label: 'Tip', content: <Input type="number" step="0.01" min="0" value={tip} onChange={e => setTip(e.target.value)} className="text-right" /> },
-          { label: 'Total', content: <span className="text-text-primary font-medium tabular-nums text-sm py-3">{computedTotal.toFixed(2)}</span> },
+          { label: 'Total', content: <span className="flex-1 text-right text-text-primary font-medium tabular-nums text-sm py-3">{computedTotal.toFixed(2)}</span> },
         ] as const).map(({ label, content }) => (
           <div key={label}>
             <div className="flex items-center gap-1 mb-1">
