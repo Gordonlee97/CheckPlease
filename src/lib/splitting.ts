@@ -51,7 +51,9 @@ export function computeSplit(
 
   const computedTotal = round2(shares.reduce((sum, s) => sum + s.total, 0))
   const diff = round2(receiptTotal - computedTotal)
-  if (diff !== 0 && shares.length > 0) {
+  // Only adjust for penny-level discrepancies (OCR rounding). A large diff means
+  // the inputs are inconsistent; forcing it into a component creates negative values.
+  if (diff !== 0 && Math.abs(diff) <= 0.05 && shares.length > 0) {
     const maxIdx = shares.reduce((mi, s, i, arr) => (s.total > arr[mi].total ? i : mi), 0)
     const s = shares[maxIdx]
     if (s.taxShare > 0) {

@@ -18,19 +18,21 @@ interface Props {
   items: Item[]
   tax: number
   tip: number
-  total: number
   label?: string
   onDone: (items: Item[], tax: number, tip: number, total: number, label?: string) => void
 }
 
-export function Review({ items: initialItems, tax: initTax, tip: initTip, total: initTotal, label: initLabel, onDone }: Props) {
+export function Review({ items: initialItems, tax: initTax, tip: initTip, label: initLabel, onDone }: Props) {
   const [items, setItems] = useState<ItemInput[]>(() =>
     initialItems.map(i => ({ id: i.id, name: i.name, priceStr: i.price ? i.price.toFixed(2) : '', assignedTo: i.assignedTo }))
   )
   const [tax, setTax] = useState(initTax.toFixed(2))
   const [tip, setTip] = useState(initTip.toFixed(2))
-  const [total, setTotal] = useState(initTotal.toFixed(2))
   const [label, setLabel] = useState(initLabel ?? '')
+
+  // Total is always derived — no editable state, so tip/tax/items can never diverge from total
+  const itemsSum = items.reduce((sum, i) => sum + (parseFloat(i.priceStr) || 0), 0)
+  const computedTotal = itemsSum + (parseFloat(tax) || 0) + (parseFloat(tip) || 0)
 
   function updateItem(id: string, field: 'name' | 'priceStr', value: string) {
     setItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item))
@@ -48,7 +50,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, total:
     const validItems: Item[] = items
       .filter(i => i.name.trim() && parseFloat(i.priceStr) > 0)
       .map(i => ({ id: i.id, name: i.name, price: parseFloat(i.priceStr), assignedTo: i.assignedTo }))
-    onDone(validItems, parseFloat(tax) || 0, parseFloat(tip) || 0, parseFloat(total) || 0, label.trim() || undefined)
+    onDone(validItems, parseFloat(tax) || 0, parseFloat(tip) || 0, computedTotal, label.trim() || undefined)
   }
 
   const hasValidItems = items.some(i => i.name.trim() && parseFloat(i.priceStr) > 0)
@@ -106,26 +108,41 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, total:
       </button>
 
       <div className="grid grid-cols-3 gap-2 mb-8">
-        {[
-          { label: 'Tax', value: tax, setter: setTax },
-          { label: 'Tip', value: tip, setter: setTip },
-          { label: 'Total', value: total, setter: setTotal },
-        ].map(({ label, value, setter }) => (
-          <div key={label}>
-            <label className="text-text-secondary text-xs uppercase tracking-wider block mb-1">{label}</label>
-            <div className="flex items-center gap-1">
-              <span className="text-text-secondary text-sm">$</span>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={value}
-                onChange={e => setter(e.target.value)}
-                className="text-right"
-              />
-            </div>
+        <div>
+          <label className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Tax</label>
+          <div className="flex items-center gap-1">
+            <span className="text-text-secondary text-sm">$</span>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={tax}
+              onChange={e => setTax(e.target.value)}
+              className="text-right"
+            />
           </div>
-        ))}
+        </div>
+        <div>
+          <label className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Tip</label>
+          <div className="flex items-center gap-1">
+            <span className="text-text-secondary text-sm">$</span>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={tip}
+              onChange={e => setTip(e.target.value)}
+              className="text-right"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Total</label>
+          <div className="flex items-center gap-1 h-full pt-1">
+            <span className="text-text-secondary text-sm">$</span>
+            <span className="text-text-primary font-medium tabular-nums">{computedTotal.toFixed(2)}</span>
+          </div>
+        </div>
       </div>
 
       <Button fullWidth onClick={handleDone} disabled={!hasValidItems}>

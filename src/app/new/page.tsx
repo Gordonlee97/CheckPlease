@@ -14,6 +14,8 @@ import { computeSplit } from '@/lib/splitting'
 
 type Step = 'people' | 'scan' | 'review' | 'assign' | 'summary'
 
+const STEP_ORDER: Step[] = ['people', 'scan', 'review', 'assign', 'summary']
+
 interface Draft {
   people: Person[]
   items: Item[]
@@ -32,6 +34,11 @@ export default function NewSplitPage() {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
   const [sessionId] = useState(() => uuidv4())
   const [createdAt] = useState(() => new Date().toISOString())
+
+  function goBack() {
+    const idx = STEP_ORDER.indexOf(step)
+    if (idx > 0) setStep(STEP_ORDER[idx - 1])
+  }
 
   function handlePeopleDone(people: Person[]) {
     setDraft(d => ({ ...d, people }))
@@ -101,14 +108,24 @@ export default function NewSplitPage() {
 
   return (
     <main className="min-h-screen p-6 max-w-md mx-auto">
-      {step === 'people' && <AddPeople onDone={handlePeopleDone} />}
+      {step !== 'people' && (
+        <button
+          onClick={goBack}
+          className="text-text-secondary hover:text-text-primary text-sm mb-6 block"
+        >
+          ← Back
+        </button>
+      )}
+
+      {step === 'people' && (
+        <AddPeople initialPeople={draft.people} onDone={handlePeopleDone} />
+      )}
       {step === 'scan' && <Scan onDone={handleScanDone} />}
       {step === 'review' && (
         <Review
           items={draft.items}
           tax={draft.tax}
           tip={draft.tip}
-          total={draft.total}
           label={draft.label}
           onDone={handleReviewDone}
         />

@@ -8,11 +8,12 @@ import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 
 interface Props {
+  initialPeople?: Person[]
   onDone: (people: Person[]) => void
 }
 
-export function AddPeople({ onDone }: Props) {
-  const [people, setPeople] = useState<Person[]>([])
+export function AddPeople({ initialPeople, onDone }: Props) {
+  const [people, setPeople] = useState<Person[]>(initialPeople ?? [])
   const [name, setName] = useState('')
 
   function addPerson() {
