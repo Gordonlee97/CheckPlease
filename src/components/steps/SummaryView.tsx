@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { Session } from '@/lib/types'
 import type { PersonShare } from '@/lib/splitting'
 import { buildShareUrl, buildPlainText } from '@/lib/share'
@@ -14,26 +15,45 @@ interface Props {
 }
 
 export function SummaryView({ session, shares, readOnly = false, onDone }: Props) {
+  const [toast, setToast] = useState<string | null>(null)
+
+  function showToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2500)
+  }
+
   async function handleShareLink() {
     const url = buildShareUrl(session)
     if (navigator.share) {
-      await navigator.share({ title: 'CheckPlease split', url })
-    } else {
+      try {
+        await navigator.share({ title: 'CheckPlease split', url })
+        return
+      } catch {
+        // AbortError or other — fall through to clipboard
+      }
+    }
+    try {
       await navigator.clipboard.writeText(url)
-      alert('Link copied to clipboard!')
+      showToast('Link copied to clipboard!')
+    } catch {
+      showToast('Could not copy link')
     }
   }
 
   async function handleCopyText() {
     const text = buildPlainText(session, shares)
-    await navigator.clipboard.writeText(text)
-    alert('Copied to clipboard!')
+    try {
+      await navigator.clipboard.writeText(text)
+      showToast('Copied to clipboard!')
+    } catch {
+      showToast('Could not copy text')
+    }
   }
 
   return (
     <div>
       <h2 className="font-display text-2xl text-gold mb-1">
-        {session.label ?? 'Dinner'}
+        {session.label ?? 'Unknown Restaurant'}
       </h2>
       <p className="text-text-secondary text-sm mb-6">
         {new Date(session.createdAt).toLocaleDateString()} · {session.people.length} people · ${session.total.toFixed(2)} total
@@ -67,6 +87,12 @@ export function SummaryView({ session, shares, readOnly = false, onDone }: Props
         <Button fullWidth variant="ghost" onClick={onDone}>
           Done — back to home
         </Button>
+      )}
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface text-text-primary px-4 py-2 rounded-xl shadow-lg text-sm">
+          {toast}
+        </div>
       )}
     </div>
   )

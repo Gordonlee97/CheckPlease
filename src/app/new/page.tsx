@@ -31,6 +31,7 @@ export default function NewSplitPage() {
   const [step, setStep] = useState<Step>('people')
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
   const [sessionId] = useState(() => uuidv4())
+  const [createdAt] = useState(() => new Date().toISOString())
 
   function handlePeopleDone(people: Person[]) {
     setDraft(d => ({ ...d, people }))
@@ -56,8 +57,9 @@ export default function NewSplitPage() {
     setStep('review')
   }
 
-  function handleReviewDone(items: Item[], tax: number, tip: number, total: number) {
-    setDraft(d => ({ ...d, items, tax, tip, total }))
+  function handleReviewDone(items: Item[], tax: number, tip: number, total: number, label?: string) {
+    const subtotal = items.reduce((sum, i) => sum + i.price, 0)
+    setDraft(d => ({ ...d, items, tax, tip, total, subtotal, label: label ?? d.label }))
     setStep('assign')
   }
 
@@ -69,7 +71,7 @@ export default function NewSplitPage() {
   async function handleSummaryDone() {
     const session = {
       id: sessionId,
-      createdAt: new Date().toISOString(),
+      createdAt,
       label: draft.label,
       people: draft.people,
       items: draft.items,
@@ -84,7 +86,7 @@ export default function NewSplitPage() {
 
   const session = {
     id: sessionId,
-    createdAt: new Date().toISOString(),
+    createdAt,
     label: draft.label,
     people: draft.people,
     items: draft.items,
@@ -107,6 +109,7 @@ export default function NewSplitPage() {
           tax={draft.tax}
           tip={draft.tip}
           total={draft.total}
+          label={draft.label}
           onDone={handleReviewDone}
         />
       )}

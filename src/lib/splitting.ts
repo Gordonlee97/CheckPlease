@@ -30,7 +30,7 @@ export function computeSplit(
       .filter(item => item.assignedTo.includes(person.id))
       .map(item => ({
         name: item.name,
-        price: item.price / item.assignedTo.length,
+        price: round2(item.price / item.assignedTo.length),
         shared: item.assignedTo.length > 1,
       }))
 
@@ -53,7 +53,15 @@ export function computeSplit(
   const diff = round2(receiptTotal - computedTotal)
   if (diff !== 0 && shares.length > 0) {
     const maxIdx = shares.reduce((mi, s, i, arr) => (s.total > arr[mi].total ? i : mi), 0)
-    shares[maxIdx].total = round2(shares[maxIdx].total + diff)
+    const s = shares[maxIdx]
+    if (s.taxShare > 0) {
+      s.taxShare = round2(s.taxShare + diff)
+    } else if (s.tipShare > 0) {
+      s.tipShare = round2(s.tipShare + diff)
+    } else {
+      s.itemSubtotal = round2(s.itemSubtotal + diff)
+    }
+    s.total = round2(s.itemSubtotal + s.taxShare + s.tipShare)
   }
 
   return shares

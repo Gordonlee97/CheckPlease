@@ -11,11 +11,18 @@ export function resizeImage(file: File, maxDimension = 1024): Promise<string> {
       const canvas = document.createElement('canvas')
       canvas.width = Math.round(width * scale)
       canvas.height = Math.round(height * scale)
-      const ctx = canvas.getContext('2d')!
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'))
+        return
+      }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
       resolve(canvas.toDataURL('image/jpeg', 0.85))
     }
-    img.onerror = reject
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Could not load image'))
+    }
     img.src = url
   })
 }

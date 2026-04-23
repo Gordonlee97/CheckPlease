@@ -29,9 +29,10 @@ async function analyzeWithAzure(base64Image: string): Promise<ScanResult | null>
   const operationUrl = submitRes.headers.get('Operation-Location')
   if (!operationUrl) return null
 
-  // Poll until succeeded (max 8 seconds)
-  for (let i = 0; i < 16; i++) {
-    await new Promise(r => setTimeout(r, 500))
+  // Poll until succeeded (exponential backoff, ~20 iterations)
+  for (let i = 0; i < 20; i++) {
+    const delay = Math.min(300 * Math.pow(1.4, i), 2000)
+    await new Promise(r => setTimeout(r, delay))
     const pollRes = await fetch(operationUrl, {
       headers: { 'Ocp-Apim-Subscription-Key': key },
     })

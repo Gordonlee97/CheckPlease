@@ -7,26 +7,33 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 
+interface ItemInput {
+  id: string
+  name: string
+  priceStr: string
+  assignedTo: string[]
+}
+
 interface Props {
   items: Item[]
   tax: number
   tip: number
   total: number
-  onDone: (items: Item[], tax: number, tip: number, total: number) => void
+  label?: string
+  onDone: (items: Item[], tax: number, tip: number, total: number, label?: string) => void
 }
 
-export function Review({ items: initialItems, tax: initTax, tip: initTip, total: initTotal, onDone }: Props) {
-  const [items, setItems] = useState<Item[]>(initialItems)
+export function Review({ items: initialItems, tax: initTax, tip: initTip, total: initTotal, label: initLabel, onDone }: Props) {
+  const [items, setItems] = useState<ItemInput[]>(() =>
+    initialItems.map(i => ({ id: i.id, name: i.name, priceStr: i.price ? i.price.toFixed(2) : '', assignedTo: i.assignedTo }))
+  )
   const [tax, setTax] = useState(initTax.toFixed(2))
   const [tip, setTip] = useState(initTip.toFixed(2))
   const [total, setTotal] = useState(initTotal.toFixed(2))
+  const [label, setLabel] = useState(initLabel ?? '')
 
-  function updateItem(id: string, field: 'name' | 'price', value: string) {
-    setItems(prev => prev.map(item =>
-      item.id === id
-        ? { ...item, [field]: field === 'price' ? parseFloat(value) || 0 : value }
-        : item
-    ))
+  function updateItem(id: string, field: 'name' | 'priceStr', value: string) {
+    setItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item))
   }
 
   function removeItem(id: string) {
@@ -34,18 +41,31 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, total:
   }
 
   function addItem() {
-    setItems(prev => [...prev, { id: uuidv4(), name: '', price: 0, assignedTo: [] }])
+    setItems(prev => [...prev, { id: uuidv4(), name: '', priceStr: '', assignedTo: [] }])
   }
 
   function handleDone() {
-    const validItems = items.filter(i => i.name.trim() && i.price > 0)
-    onDone(validItems, parseFloat(tax) || 0, parseFloat(tip) || 0, parseFloat(total) || 0)
+    const validItems: Item[] = items
+      .filter(i => i.name.trim() && parseFloat(i.priceStr) > 0)
+      .map(i => ({ id: i.id, name: i.name, price: parseFloat(i.priceStr), assignedTo: i.assignedTo }))
+    onDone(validItems, parseFloat(tax) || 0, parseFloat(tip) || 0, parseFloat(total) || 0, label.trim() || undefined)
   }
+
+  const hasValidItems = items.some(i => i.name.trim() && parseFloat(i.priceStr) > 0)
 
   return (
     <div>
       <h2 className="font-display text-2xl text-gold mb-1">Review Items</h2>
       <p className="text-text-secondary text-sm mb-6">Fix any mistakes before assigning.</p>
+
+      <div className="mb-4">
+        <label className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Restaurant</label>
+        <Input
+          value={label}
+          onChange={e => setLabel(e.target.value)}
+          placeholder="Restaurant name (optional)"
+        />
+      </div>
 
       <div className="flex flex-col gap-2 mb-4">
         {items.map(item => (
@@ -63,8 +83,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, total:
                 type="number"
                 step="0.01"
                 min="0"
-                value={item.price}
-                onChange={e => updateItem(item.id, 'price', e.target.value)}
+                value={item.priceStr}
+                onChange={e => updateItem(item.id, 'priceStr', e.target.value)}
               />
             </div>
             <button
@@ -108,7 +128,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, total:
         ))}
       </div>
 
-      <Button fullWidth onClick={handleDone} disabled={items.filter(i => i.name.trim() && i.price > 0).length === 0}>
+      <Button fullWidth onClick={handleDone} disabled={!hasValidItems}>
         Assign Items →
       </Button>
     </div>

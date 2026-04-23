@@ -59,4 +59,36 @@ describe('computeSplit', () => {
     expect(g.assignedItems[0].shared).toBe(true)
     expect(g.assignedItems[0].price).toBe(6)
   })
+
+  it('component invariant: itemSubtotal + taxShare + tipShare === total for every person', () => {
+    const items: Item[] = [{ id: '1', name: 'Shared', price: 10, assignedTo: ['g', 's', 'm'] }]
+    const result = computeSplit([gordon, sarah, mike], items, 1, 2, 13)
+    for (const share of result) {
+      const componentSum = Math.round((share.itemSubtotal + share.taxShare + share.tipShare) * 100)
+      expect(componentSum).toBe(Math.round(share.total * 100))
+    }
+  })
+
+  it('handles zero tax and tip with rounding', () => {
+    const items: Item[] = [{ id: '1', name: 'Shared', price: 10, assignedTo: ['g', 's', 'm'] }]
+    const result = computeSplit([gordon, sarah, mike], items, 0, 0, 10)
+    const sum = result.reduce((acc, r) => acc + r.total, 0)
+    expect(Math.round(sum * 100)).toBe(1000)
+    for (const share of result) {
+      const componentSum = Math.round((share.itemSubtotal + share.taxShare + share.tipShare) * 100)
+      expect(componentSum).toBe(Math.round(share.total * 100))
+    }
+  })
+
+  it('shared item price per person is rounded to 2 decimals', () => {
+    const items: Item[] = [{ id: '1', name: 'Nachos', price: 10, assignedTo: ['g', 's', 'm'] }]
+    const result = computeSplit([gordon, sarah, mike], items, 0, 0, 10)
+    for (const share of result) {
+      for (const item of share.assignedItems) {
+        const str = item.price.toString()
+        const decimals = str.includes('.') ? str.split('.')[1].length : 0
+        expect(decimals).toBeLessThanOrEqual(2)
+      }
+    }
+  })
 })
