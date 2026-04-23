@@ -138,9 +138,9 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
         </div>
         <div>
           <label className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Total</label>
-          <div className="flex items-center gap-1 h-full pt-1">
+          <div className="flex items-center gap-1">
             <span className="text-text-secondary text-sm">$</span>
-            <span className="text-text-primary font-medium tabular-nums">{computedTotal.toFixed(2)}</span>
+            <span className="text-text-primary font-medium tabular-nums text-sm py-3">{computedTotal.toFixed(2)}</span>
           </div>
         </div>
       </div>
