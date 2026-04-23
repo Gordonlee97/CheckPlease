@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '@/lib/cn'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'gold' | 'ghost'
+  variant?: 'gold' | 'ghost' | 'green'
   fullWidth?: boolean
 }
 
@@ -13,6 +13,7 @@ export function Button({ variant = 'gold', fullWidth, className, children, ...pr
         'rounded-xl px-5 py-3 font-semibold text-sm transition-opacity active:opacity-70 disabled:opacity-40',
         variant === 'gold' && 'bg-gradient-to-r from-gold to-gold-dark text-bg',
         variant === 'ghost' && 'border border-border text-text-primary bg-surface',
+        variant === 'green' && 'bg-emerald-700 text-white',
         fullWidth && 'w-full',
         className
       )}

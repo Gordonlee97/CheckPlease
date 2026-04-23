@@ -66,9 +66,11 @@ export function SummaryView({ session, shares, readOnly = false, onDone }: Props
               <span className="text-text-primary font-semibold text-lg">{share.name}</span>
               <span className="text-gold font-bold text-xl">${share.total.toFixed(2)}</span>
             </div>
-            <div className="text-text-secondary text-xs space-y-0.5">
-              <p>{share.assignedItems.map(i => i.shared ? `${i.name} (shared)` : i.name).join(' · ')}</p>
-              <p>
+            <div className="space-y-1">
+              <p className="text-text-secondary text-xs">
+                {share.assignedItems.map(i => i.shared ? `${i.name} (shared)` : i.name).join(' · ')}
+              </p>
+              <p className="text-[11px] text-text-secondary/50 pt-1 border-t border-border">
                 Items ${share.itemSubtotal.toFixed(2)}
                 {session.tax > 0 && ` · Tax $${share.taxShare.toFixed(2)}`}
                 {session.tip > 0 && ` · Tip $${share.tipShare.toFixed(2)}`}
@@ -84,8 +86,8 @@ export function SummaryView({ session, shares, readOnly = false, onDone }: Props
       </div>
 
       {!readOnly && onDone && (
-        <Button fullWidth variant="ghost" onClick={onDone}>
-          Done — back to home
+        <Button fullWidth variant="green" onClick={onDone}>
+          Done
         </Button>
       )}
 
