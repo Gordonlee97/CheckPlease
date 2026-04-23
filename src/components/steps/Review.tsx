@@ -78,10 +78,10 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
               onChange={e => updateItem(item.id, 'name', e.target.value)}
               placeholder="Item name"
             />
-            <div className="flex items-center gap-1 shrink-0">
-              <span className="text-text-secondary text-sm">$</span>
+            <div className="flex items-center gap-1 shrink-0 w-20">
+              <span className="text-text-secondary text-sm shrink-0">$</span>
               <Input
-                className="w-16 text-right"
+                className="text-right min-w-0"
                 type="number"
                 step="0.01"
                 min="0"
