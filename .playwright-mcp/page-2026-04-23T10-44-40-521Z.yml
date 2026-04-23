@@ -1,0 +1,16 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e13] [cursor=pointer]:
+    - img [ref=e14]
+  - alert [ref=e17]
+  - main [ref=e18]:
+    - generic [ref=e19]:
+      - heading "Who's splitting?" [level=2] [ref=e20]
+      - paragraph [ref=e21]: Add everyone at the table.
+      - generic [ref=e22]:
+        - textbox "Name" [active] [ref=e23]
+        - button "Add" [ref=e24]
+      - generic [ref=e28]:
+        - generic [ref=e29]: Gordon
+        - button "Remove Gordon" [ref=e30]: ×
+      - button "Scan Receipt →" [disabled] [ref=e25]
+      - paragraph [ref=e26]: Add at least 2 people

@@ -1,0 +1,10 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - heading "CheckPlease" [level=1] [ref=e3]
+    - paragraph [ref=e4]: Split the bill, not the friendship.
+    - link "+ New Split" [ref=e5] [cursor=pointer]:
+      - /url: /new
+      - button "+ New Split" [ref=e6]
+    - paragraph [ref=e7]: No splits yet — start one!
+  - button "Open Next.js Dev Tools" [ref=e13] [cursor=pointer]:
+    - img [ref=e14]

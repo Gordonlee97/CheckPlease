@@ -1,0 +1,46 @@
+<h2>How does the shareable summary work?</h2>
+<p class="subtitle">After everyone's items are assigned, how do you get the breakdown to your group chat?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Encoded link → group chat</h3>
+      <p>The full session data gets compressed into a URL. One tap opens the native share sheet (iMessage, WhatsApp, etc.) and pastes the link. Friends tap it and see a read-only breakdown page — their items, the math, the total they owe.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>No backend storage needed — data lives in the URL</li><li>Link is permanent and self-contained</li><li>Works in any group chat</li><li>Friends can bookmark/save their own copy</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Long URL (but hidden behind share sheet)</li><li>Needs a domain to host the breakdown page</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Formatted text summary → copy/paste</h3>
+      <p>Generates a clean text breakdown — like a mini receipt — that you copy and paste into any chat. No link, no app needed to read it. Just text.</p>
+      <div style="background:#1a1a2e;border-radius:8px;padding:12px;margin-top:8px;font-family:monospace;font-size:12px;color:#e0e0e0">
+        <div>🧾 CheckPlease — Dinner Apr 22</div>
+        <div style="margin-top:6px">Gordon: Burger $14 + Fries $4</div>
+        <div>→ subtotal $18 + tax $1.62 + tip $3.24</div>
+        <div style="color:#4ade80;font-weight:bold">→ YOU OWE: $22.86</div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>Pros</h4><ul><li>Dead simple, no tech required</li><li>Works in any chat, email, SMS</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>No interactive breakdown</li><li>Harder to verify the math</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Both — link + text fallback</h3>
+      <p>Share the encoded link via the native share sheet (tap once, goes to group chat). Also offer a "copy text" button for people who just want a plain summary. Best of both worlds.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Link gives full interactive breakdown</li><li>Text fallback works everywhere</li><li>No backend needed</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Slightly more UI to build</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

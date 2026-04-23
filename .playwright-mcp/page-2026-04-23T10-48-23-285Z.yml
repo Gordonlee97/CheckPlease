@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e13] [cursor=pointer]:
+    - img [ref=e14]
+  - alert [ref=e17]
+  - main [ref=e18]:
+    - generic [ref=e268]:
+      - heading "Dinner" [level=2] [ref=e269]
+      - paragraph [ref=e270]: 4/23/2026 · 3 people · $144.57 total
+      - generic [ref=e271]:
+        - generic [ref=e272]:
+          - generic [ref=e273]:
+            - generic [ref=e274]: Gordon
+            - generic [ref=e275]: $44.55
+          - generic [ref=e276]:
+            - paragraph [ref=e277]: Sake Bottle (shared) · LUNCH A · FRESH WATER EEL(unagi) · CALIFORNIA ROLL · BOKBUNJA
+            - paragraph [ref=e278]: Items $40.67 · Tax $3.89
+        - generic [ref=e279]:
+          - generic [ref=e280]:
+            - generic [ref=e281]: Sarah
+            - generic [ref=e282]: $35.24
+          - generic [ref=e283]:
+            - paragraph [ref=e284]: Sake Bottle (shared) · LUNCH D · SMELT EGG (masago ) · SPICY TUNA ROLL · TEMPURA SHRIMP
+            - paragraph [ref=e285]: Items $32.17 · Tax $3.07
+        - generic [ref=e286]:
+          - generic [ref=e287]:
+            - generic [ref=e288]: Mike
+            - generic [ref=e289]: $64.78
+          - generic [ref=e290]:
+            - paragraph [ref=e291]: Sake Bottle (shared) · YELLOWTAIL (hamachi) · YELLOWTAIL SASHIMI · YELLOWTAIL ROLL($5.50/ea)
+            - paragraph [ref=e292]: Items $48.22 · Tax $4.61
+      - generic [ref=e293]:
+        - button "Share link" [ref=e294]
+        - button "Copy text" [ref=e295]
+      - button "Done — back to home" [ref=e296]

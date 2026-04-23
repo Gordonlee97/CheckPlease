@@ -1,0 +1,40 @@
+<h2>What kind of app should this be?</h2>
+<p class="subtitle">This shapes everything — development stack, deployment, and how your friends use it</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>React Native / Expo (Mobile App)</h3>
+      <p>Compiled iOS + Android app. Camera access is first-class, feels native, ships to App Store / Google Play. Best UX but requires store review and users must install it.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Native camera, feels fast</li><li>Works offline</li><li>Installable home screen icon</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>App store submission overhead</li><li>Friends must install it</li><li>Separate iOS / Android builds</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Progressive Web App (PWA)</h3>
+      <p>A website that runs in mobile Safari/Chrome with camera access via the browser. Open a link, done — no install required. Can still be added to home screen.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>No install — just share a link</li><li>One codebase for all platforms</li><li>Instant updates</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Browser camera is slightly slower</li><li>iOS PWA has some limitations</li><li>Needs internet for OCR</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Native iOS (Swift/SwiftUI)</h3>
+      <p>iPhone-only, maximum performance and camera control. Cleanest UX for Apple users but excludes Android friends entirely.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Best possible iOS camera experience</li><li>Access to latest Apple APIs</li><li>Fastest performance</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>iPhone only</li><li>Requires Xcode + Mac to develop</li><li>App Store required for distribution</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

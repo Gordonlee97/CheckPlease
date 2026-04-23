@@ -1,0 +1,40 @@
+<h2>How do people claim their items?</h2>
+<p class="subtitle">After the receipt is scanned, someone has to assign items to each person. Who does that work, and how?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>One person assigns everything</h3>
+      <p>The phone owner scans the receipt, then taps each item and picks who ordered it from a list of names. Everyone else just waits for the result.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Fastest — no coordination needed</li><li>No sharing / link flow required</li><li>One person stays in control</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Phone owner has to remember who ordered what</li><li>Error-prone for large groups</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Pass the phone around</h3>
+      <p>After scanning, each person gets the phone and taps their own items. Simple in-person flow, no accounts or links needed.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Each person claims their own — no guessing</li><li>No accounts or shared links needed</li><li>Fun, tactile group activity</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Requires physically passing the phone</li><li>Awkward for 6+ people</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Shareable link — everyone claims on their own device</h3>
+      <p>After scanning, a unique link is generated. Each person opens it on their own phone and taps what they ordered. Real-time sync shows what's been claimed.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Scales to any group size</li><li>Everyone participates simultaneously</li><li>No passing the phone</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Requires a backend + real-time sync</li><li>Everyone needs to open a link</li><li>More complex to build</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

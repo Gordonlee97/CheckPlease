@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e13] [cursor=pointer]:
+    - img [ref=e14]
+  - alert [ref=e17]
+  - main [ref=e18]:
+    - generic [ref=e40]:
+      - heading "Scan Receipt" [level=2] [ref=e41]
+      - paragraph [ref=e42]: Take a photo or upload from your gallery.
+      - button "📷 Tap to take photo or choose from gallery" [ref=e43]:
+        - generic [ref=e44]: 📷
+        - generic [ref=e45]: Tap to take photo
+        - generic [ref=e46]: or choose from gallery
