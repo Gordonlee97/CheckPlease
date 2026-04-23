@@ -34,8 +34,18 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
   const itemsSum = items.reduce((sum, i) => sum + (parseFloat(i.priceStr) || 0), 0)
   const computedTotal = itemsSum + (parseFloat(tax) || 0) + (parseFloat(tip) || 0)
 
+  function formatCurrency(val: string): string {
+    const num = parseFloat(val)
+    if (isNaN(num)) return val
+    return Math.max(0, num).toFixed(2)
+  }
+
   function updateItem(id: string, field: 'name' | 'priceStr', value: string) {
     setItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item))
+  }
+
+  function formatItem(id: string) {
+    setItems(prev => prev.map(item => item.id === id ? { ...item, priceStr: formatCurrency(item.priceStr) } : item))
   }
 
   function removeItem(id: string) {
@@ -82,11 +92,11 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
               <span className="text-text-secondary text-sm shrink-0">$</span>
               <Input
                 className="text-right min-w-0"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={item.priceStr}
                 onChange={e => updateItem(item.id, 'priceStr', e.target.value)}
+                onBlur={() => formatItem(item.id)}
               />
             </div>
             <button
@@ -109,8 +119,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
       <div className="grid grid-cols-3 gap-2 mb-8">
         {([
-          { label: 'Tax', content: <Input type="number" step="0.01" min="0" value={tax} onChange={e => setTax(e.target.value)} className="text-right" /> },
-          { label: 'Tip', content: <Input type="number" step="0.01" min="0" value={tip} onChange={e => setTip(e.target.value)} className="text-right" /> },
+          { label: 'Tax', content: <Input type="text" inputMode="decimal" value={tax} onChange={e => setTax(e.target.value)} onBlur={() => setTax(formatCurrency(tax))} className="text-right" /> },
+          { label: 'Tip', content: <Input type="text" inputMode="decimal" value={tip} onChange={e => setTip(e.target.value)} onBlur={() => setTip(formatCurrency(tip))} className="text-right" /> },
           { label: 'Total', content: <Input readOnly value={computedTotal.toFixed(2)} className="text-right opacity-50 cursor-default" /> },
         ] as const).map(({ label, content }) => (
           <div key={label}>
