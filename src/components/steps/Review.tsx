@@ -108,41 +108,22 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
       </button>
 
       <div className="grid grid-cols-3 gap-2 mb-8">
-        <div>
-          <label className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Tax</label>
-          <div className="flex items-center gap-1">
-            <span className="text-text-secondary text-sm">$</span>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={tax}
-              onChange={e => setTax(e.target.value)}
-              className="text-right"
-            />
+        {([
+          { label: 'Tax', content: <Input type="number" step="0.01" min="0" value={tax} onChange={e => setTax(e.target.value)} className="text-right" /> },
+          { label: 'Tip', content: <Input type="number" step="0.01" min="0" value={tip} onChange={e => setTip(e.target.value)} className="text-right" /> },
+          { label: 'Total', content: <span className="text-text-primary font-medium tabular-nums text-sm py-3">{computedTotal.toFixed(2)}</span> },
+        ] as const).map(({ label, content }) => (
+          <div key={label}>
+            <div className="flex items-center gap-1 mb-1">
+              <span className="text-sm invisible" aria-hidden="true">$</span>
+              <label className="text-text-secondary text-xs uppercase tracking-wider">{label}</label>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-text-secondary text-sm">$</span>
+              {content}
+            </div>
           </div>
-        </div>
-        <div>
-          <label className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Tip</label>
-          <div className="flex items-center gap-1">
-            <span className="text-text-secondary text-sm">$</span>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={tip}
-              onChange={e => setTip(e.target.value)}
-              className="text-right"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Total</label>
-          <div className="flex items-center gap-1">
-            <span className="text-text-secondary text-sm">$</span>
-            <span className="text-text-primary font-medium tabular-nums text-sm py-3">{computedTotal.toFixed(2)}</span>
-          </div>
-        </div>
+        ))}
       </div>
 
       <Button fullWidth onClick={handleDone} disabled={!hasValidItems}>
