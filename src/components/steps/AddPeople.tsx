@@ -69,7 +69,7 @@ export function AddPeople({ initialPeople, onDone }: Props) {
         onClick={() => onDone(people)}
         disabled={people.length < 2}
       >
-        Scan Receipt →
+        That's everyone →
       </Button>
       {people.length < 2 && (
         <p className="text-center text-text-secondary text-xs mt-2">Add at least 2 people</p>

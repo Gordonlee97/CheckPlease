@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import type { ScanResult } from '@/lib/types'
 import { resizeImage, dataUrlToBase64 } from '@/lib/imageUtils'
 import { Button } from '@/components/ui/Button'
@@ -14,12 +14,25 @@ interface Props {
 export function Scan({ initialFile, onFileSelect, onDone }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(initialFile ?? null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'scanning' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
-  async function handleFile(file: File) {
+  // Create/revoke object URL whenever selectedFile changes
+  useEffect(() => {
+    if (!selectedFile) { setPreviewUrl(null); return }
+    const url = URL.createObjectURL(selectedFile)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [selectedFile])
+
+  function handleFileSelect(file: File) {
     setSelectedFile(file)
     onFileSelect?.(file)
+    setStatus('idle')
+  }
+
+  async function handleScan(file: File) {
     setStatus('scanning')
     setErrorMsg('')
     try {
@@ -55,11 +68,12 @@ export function Scan({ initialFile, onFileSelect, onDone }: Props) {
         className="hidden"
         onChange={e => {
           const file = e.target.files?.[0]
-          if (file) handleFile(file)
+          if (file) handleFileSelect(file)
           e.target.value = ''
         }}
       />
 
+      {/* No file selected yet */}
       {status === 'idle' && !selectedFile && (
         <button
           onClick={() => inputRef.current?.click()}
@@ -71,22 +85,26 @@ export function Scan({ initialFile, onFileSelect, onDone }: Props) {
         </button>
       )}
 
+      {/* File selected — show preview */}
       {status === 'idle' && selectedFile && (
         <div className="flex flex-col gap-3">
-          <div className="rounded-2xl border border-border bg-surface p-4 flex items-center gap-3">
-            <span className="text-2xl">🧾</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-text-primary text-sm font-medium truncate">{selectedFile.name}</p>
-              <p className="text-text-secondary text-xs mt-0.5">Ready to scan</p>
+          {previewUrl && (
+            <div className="rounded-2xl overflow-hidden border border-border">
+              <img
+                src={previewUrl}
+                alt="Receipt preview"
+                className="w-full object-contain max-h-72"
+              />
             </div>
-          </div>
+          )}
+          <p className="text-text-secondary text-xs text-center truncate px-2">{selectedFile.name}</p>
           <button
             onClick={() => inputRef.current?.click()}
-            className="w-full rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-4 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
+            className="w-full rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
           >
             📷 Use a different photo
           </button>
-          <Button fullWidth onClick={() => handleFile(selectedFile)}>
+          <Button fullWidth onClick={() => handleScan(selectedFile)}>
             Scan Receipt →
           </Button>
         </div>
@@ -101,13 +119,24 @@ export function Scan({ initialFile, onFileSelect, onDone }: Props) {
 
       {status === 'error' && (
         <div className="flex flex-col gap-4">
+          {previewUrl && (
+            <div className="rounded-2xl overflow-hidden border border-red-900 opacity-60">
+              <img src={previewUrl} alt="Receipt preview" className="w-full object-contain max-h-48" />
+            </div>
+          )}
           <div className="rounded-2xl border border-red-900 bg-surface p-6 text-center">
             <p className="text-red-400 text-sm mb-1">Could not read receipt</p>
             <p className="text-text-secondary text-xs">{errorMsg}</p>
           </div>
-          <Button fullWidth onClick={() => { setStatus('idle'); inputRef.current?.click() }}>
+          <Button fullWidth onClick={() => selectedFile && handleScan(selectedFile)}>
             Try Again
           </Button>
+          <button
+            onClick={() => inputRef.current?.click()}
+            className="w-full rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
+          >
+            📷 Use a different photo
+          </button>
         </div>
       )}
     </div>
