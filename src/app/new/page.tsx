@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { v4 as uuidv4 } from 'uuid'
 import type { Person, Item, ScanResult } from '@/lib/types'
 import { saveSession } from '@/lib/storage'
+import Link from 'next/link'
 import { AddPeople } from '@/components/steps/AddPeople'
 import { Scan } from '@/components/steps/Scan'
 import { Review } from '@/components/steps/Review'
@@ -108,14 +109,21 @@ export default function NewSplitPage() {
 
   return (
     <main className="min-h-screen p-6 max-w-md mx-auto">
-      {step !== 'people' && (
-        <button
-          onClick={goBack}
-          className="text-text-secondary hover:text-text-primary text-sm mb-6 block"
-        >
-          ← Back
-        </button>
-      )}
+      <div className="flex items-center justify-between mb-6">
+        {step !== 'people' ? (
+          <button
+            onClick={goBack}
+            className="text-text-secondary hover:text-text-primary text-sm"
+          >
+            ← Back
+          </button>
+        ) : (
+          <div />
+        )}
+        <Link href="/" className="text-text-secondary hover:text-text-primary text-sm">
+          Cancel
+        </Link>
+      </div>
 
       {step === 'people' && (
         <AddPeople initialPeople={draft.people} onDone={handlePeopleDone} />
