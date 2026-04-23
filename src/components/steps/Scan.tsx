@@ -6,15 +6,20 @@ import { resizeImage, dataUrlToBase64 } from '@/lib/imageUtils'
 import { Button } from '@/components/ui/Button'
 
 interface Props {
+  initialFile?: File
+  onFileSelect?: (file: File) => void
   onDone: (result: ScanResult) => void
 }
 
-export function Scan({ onDone }: Props) {
+export function Scan({ initialFile, onFileSelect, onDone }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(initialFile ?? null)
   const [status, setStatus] = useState<'idle' | 'scanning' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
   async function handleFile(file: File) {
+    setSelectedFile(file)
+    onFileSelect?.(file)
     setStatus('scanning')
     setErrorMsg('')
     try {
@@ -55,7 +60,7 @@ export function Scan({ onDone }: Props) {
         }}
       />
 
-      {status === 'idle' && (
+      {status === 'idle' && !selectedFile && (
         <button
           onClick={() => inputRef.current?.click()}
           className="w-full rounded-2xl border-2 border-dashed border-border bg-surface flex flex-col items-center justify-center py-16 gap-3 active:border-gold transition-colors"
@@ -64,6 +69,27 @@ export function Scan({ onDone }: Props) {
           <span className="text-text-secondary text-sm">Tap to take photo</span>
           <span className="text-text-secondary text-xs">or choose from gallery</span>
         </button>
+      )}
+
+      {status === 'idle' && selectedFile && (
+        <div className="flex flex-col gap-3">
+          <div className="rounded-2xl border border-border bg-surface p-4 flex items-center gap-3">
+            <span className="text-2xl">🧾</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-text-primary text-sm font-medium truncate">{selectedFile.name}</p>
+              <p className="text-text-secondary text-xs mt-0.5">Ready to scan</p>
+            </div>
+          </div>
+          <button
+            onClick={() => inputRef.current?.click()}
+            className="w-full rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-4 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
+          >
+            📷 Use a different photo
+          </button>
+          <Button fullWidth onClick={() => handleFile(selectedFile)}>
+            Scan Receipt →
+          </Button>
+        </div>
       )}
 
       {status === 'scanning' && (

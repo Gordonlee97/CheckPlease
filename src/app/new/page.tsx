@@ -35,6 +35,7 @@ export default function NewSplitPage() {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
   const [sessionId] = useState(() => uuidv4())
   const [createdAt] = useState(() => new Date().toISOString())
+  const [scannedFile, setScannedFile] = useState<File | null>(null)
 
   function goBack() {
     const idx = STEP_ORDER.indexOf(step)
@@ -128,7 +129,13 @@ export default function NewSplitPage() {
       {step === 'people' && (
         <AddPeople initialPeople={draft.people} onDone={handlePeopleDone} />
       )}
-      {step === 'scan' && <Scan onDone={handleScanDone} />}
+      {step === 'scan' && (
+        <Scan
+          initialFile={scannedFile ?? undefined}
+          onFileSelect={setScannedFile}
+          onDone={handleScanDone}
+        />
+      )}
       {step === 'review' && (
         <Review
           items={draft.items}
