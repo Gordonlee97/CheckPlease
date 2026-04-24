@@ -1,22 +1,45 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useImperativeHandle, type Ref } from 'react'
 import type { ScanResult } from '@/lib/types'
 import { resizeImage, dataUrlToBase64 } from '@/lib/imageUtils'
-import { Button } from '@/components/ui/Button'
 
 interface Props {
   initialFile?: File
   onFileSelect?: (file: File) => void
   onDone: (result: ScanResult) => void
+  ref?: Ref<{ submit: () => void }>
+  onReadyChange?: (ready: boolean) => void
 }
 
-export function Scan({ initialFile, onFileSelect, onDone }: Props) {
+export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
+
   const [selectedFile, setSelectedFile] = useState<File | null>(initialFile ?? null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'scanning' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+
+  // Hold the scan result until the animation has finished its full sweep
+  const [pendingResult, setPendingResult] = useState<ScanResult | null>(null)
+  const [animDone, setAnimDone] = useState(false)
+
+  // Navigate only once both the API result AND the animation are ready
+  useEffect(() => {
+    if (pendingResult && animDone) {
+      onDoneRef.current(pendingResult)
+    }
+  }, [pendingResult, animDone])
+
+  const submitFnRef = useRef<() => void>(() => {})
+  submitFnRef.current = () => { if (selectedFile && (status === 'idle' || status === 'error')) handleScan(selectedFile) }
+  useImperativeHandle(ref, () => ({ submit: () => submitFnRef.current() }), [])
+
+  useEffect(() => {
+    onReadyChange?.(!!selectedFile && status !== 'scanning')
+  }, [selectedFile, status, onReadyChange])
 
   // Create/revoke object URL whenever selectedFile changes
   useEffect(() => {
@@ -35,6 +58,8 @@ export function Scan({ initialFile, onFileSelect, onDone }: Props) {
   async function handleScan(file: File) {
     setStatus('scanning')
     setErrorMsg('')
+    setPendingResult(null)
+    setAnimDone(false)
     try {
       const dataUrl = await resizeImage(file)
       const base64 = dataUrlToBase64(dataUrl)
@@ -48,7 +73,7 @@ export function Scan({ initialFile, onFileSelect, onDone }: Props) {
         throw new Error(body.error ?? 'Scan failed')
       }
       const result: ScanResult = await res.json()
-      onDone(result)
+      setPendingResult(result)
     } catch (err) {
       setStatus('error')
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
@@ -64,7 +89,6 @@ export function Scan({ initialFile, onFileSelect, onDone }: Props) {
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={e => {
           const file = e.target.files?.[0]
@@ -104,16 +128,37 @@ export function Scan({ initialFile, onFileSelect, onDone }: Props) {
           >
             📷 Use a different photo
           </button>
-          <Button fullWidth onClick={() => handleScan(selectedFile)}>
-            Scan Receipt →
-          </Button>
         </div>
       )}
 
+      {/* Scanning — receipt dims, single slow scan line sweeps top→bottom */}
       {status === 'scanning' && (
-        <div className="w-full rounded-2xl border border-border bg-surface flex flex-col items-center justify-center py-16 gap-3">
-          <span className="text-4xl animate-pulse">🧾</span>
-          <span className="text-text-secondary text-sm">Reading receipt…</span>
+        <div className="flex flex-col gap-3">
+          {previewUrl && (
+            <div className="rounded-2xl overflow-hidden border border-gold/20 relative" style={{ minHeight: 120 }}>
+              <img
+                src={previewUrl}
+                alt="Receipt preview"
+                className="w-full object-contain max-h-72 opacity-40"
+              />
+              {/* Thin white scan line — linear, single pass, navigates only after this fires */}
+              <div
+                className="animate-scan-line-once absolute left-0 right-0 h-px pointer-events-none"
+                onAnimationEnd={() => setAnimDone(true)}
+                style={{
+                  background: 'rgba(255,255,255,0.9)',
+                  boxShadow: '0 0 6px 3px rgba(255,255,255,0.28), 0 0 1px 0px rgba(255,255,255,0.85)',
+                }}
+              />
+            </div>
+          )}
+          {/* Indeterminate progress bar */}
+          <div className="relative h-0.5 bg-border rounded-full overflow-hidden">
+            <div className="animate-progress-bar absolute top-0 bottom-0 left-0 w-1/3 bg-gold/70 rounded-full" />
+          </div>
+          <p className="text-text-secondary text-sm text-center">
+            {pendingResult ? 'Almost done…' : 'Reading receipt…'}
+          </p>
         </div>
       )}
 
@@ -128,9 +173,6 @@ export function Scan({ initialFile, onFileSelect, onDone }: Props) {
             <p className="text-red-400 text-sm mb-1">Could not read receipt</p>
             <p className="text-text-secondary text-xs">{errorMsg}</p>
           </div>
-          <Button fullWidth onClick={() => selectedFile && handleScan(selectedFile)}>
-            Try Again
-          </Button>
           <button
             onClick={() => inputRef.current?.click()}
             className="w-full rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"

@@ -6,11 +6,10 @@ export function parseAzureResponse(azureResult: any): ScanResult | null {
   if (!doc) return null
 
   const fields = doc.fields ?? {}
-  const itemsArray: Array<{ name: string; price: number }> = (
-    fields.Items?.valueArray ?? []
-  ).map((entry: any) => ({
+  const itemsArray = (fields.Items?.valueArray ?? []).map((entry: any) => ({
     name: entry.valueObject?.Description?.valueString ?? 'Unknown item',
     price: entry.valueObject?.TotalPrice?.valueCurrency?.amount ?? 0,
+    confidence: entry.valueObject?.TotalPrice?.confidence as number | undefined,
   }))
 
   return {

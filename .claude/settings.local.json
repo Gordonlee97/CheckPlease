@@ -37,7 +37,13 @@
       "mcp__plugin_edmunds-claude-code_playwright__browser_close",
       "mcp__plugin_edmunds-claude-code_playwright__browser_handle_dialog",
       "Bash(taskkill *)",
-      "Bash(powershell *)"
+      "Bash(powershell *)",
+      "Bash(C:/Users/gordo/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.6/scripts/start-server.sh *)",
+      "Bash(xargs cat *)",
+      "Bash(tasklist /FI \"PID eq 14192\")",
+      "Bash(curl -s http://localhost:64842/ -o /dev/null -w \"%{http_code}\")",
+      "Bash(npx tsc *)",
+      "Bash(curl -s http://localhost:3000 -o /dev/null -w \"%{http_code}\")"
     ]
   }
 }

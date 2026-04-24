@@ -1,0 +1,92 @@
+<h2>CheckPlease — Improvement Ideas</h2>
+<p class="subtitle">Select any that appeal to you. We'll design the ones you pick.</p>
+
+<div style="margin-top: 2rem;">
+
+  <p class="label" style="margin-bottom: 0.75rem;">🧭 Clarity &amp; Navigation</p>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="progress-bar" onclick="toggleSelect(this)">
+      <div class="letter">1</div>
+      <div class="content">
+        <h3>Step progress bar</h3>
+        <p>A row of labelled dots at the top — People · Scan · Review · Assign · Summary — so users always know where they are and how many steps remain. Tapping a completed step could also jump back to it.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="receipt-confidence" onclick="toggleSelect(this)">
+      <div class="letter">2</div>
+      <div class="content">
+        <h3>Scan confidence hints</h3>
+        <p>After scanning, flag items the AI was uncertain about with a subtle ⚠ icon in the Review step — so the user knows exactly what to double-check instead of eyeballing everything.</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="label" style="margin: 1.5rem 0 0.75rem;">⚡ Efficiency</p>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="split-equally" onclick="toggleSelect(this)">
+      <div class="letter">3</div>
+      <div class="content">
+        <h3>"Split equally" one-tap</h3>
+        <p>A button in the Assign step that assigns every item to everyone with one tap — for groups that just want to go Dutch without thinking about it. Individual items can still be reassigned after.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="everyone-button" onclick="toggleSelect(this)">
+      <div class="letter">4</div>
+      <div class="content">
+        <h3>"Everyone" per-item shortcut</h3>
+        <p>Each item card in Assign gets a small "All" pill alongside the person buttons. One tap assigns that item to the whole group — great for shared dishes like bread, apps, or a bottle of wine.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="tip-calculator" onclick="toggleSelect(this)">
+      <div class="letter">5</div>
+      <div class="content">
+        <h3>Quick tip selector</h3>
+        <p>When tip is $0 in the Review step, show a row of preset buttons — 15% · 18% · 20% · Custom — that auto-fill the tip field and update the total instantly. No mental math required.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="saved-names" onclick="toggleSelect(this)">
+      <div class="letter">6</div>
+      <div class="content">
+        <h3>Remembered names</h3>
+        <p>The "Who's splitting?" step remembers names from past splits and surfaces them as quick-add chips. Start typing "Gor" and "Gordon" appears. Frequent groups form in seconds.</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="label" style="margin: 1.5rem 0 0.75rem;">🎨 Aesthetics &amp; Colour</p>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="person-colors" onclick="toggleSelect(this)">
+      <div class="letter">7</div>
+      <div class="content">
+        <h3>Person colour coding</h3>
+        <p>Each person auto-gets a warm accent colour (amber, rose, teal, etc.) that works with the dark theme. Their Assign pills, Summary cards, and breakdown rows carry their colour — making the whole split instantly scannable at a glance.</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="label" style="margin: 1.5rem 0 0.75rem;">✨ Juice &amp; Delight</p>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="animations" onclick="toggleSelect(this)">
+      <div class="letter">8</div>
+      <div class="content">
+        <h3>Step transitions</h3>
+        <p>Smooth slide-in / slide-out animations when moving between steps — forward slides right, back slides left. Makes the flow feel like a real native app instead of pages popping in and out.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="celebration" onclick="toggleSelect(this)">
+      <div class="letter">9</div>
+      <div class="content">
+        <h3>Summary celebration moment</h3>
+        <p>A brief, tasteful animation when the Summary screen appears — gold confetti, a shimmer across the cards, or the totals counting up. Marks the satisfying end of the flow. Apps like Stripe and Duolingo nail this.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="venmo" onclick="toggleSelect(this)">
+      <div class="letter">10</div>
+      <div class="content">
+        <h3>Venmo / payment deep links</h3>
+        <p>On each person's Summary card, a "Pay via Venmo" button that opens the Venmo app pre-filled with their exact amount and a note like "Dinner at Nobu — CheckPlease". Closes the loop between splitting and actually getting paid.</p>
+      </div>
+    </div>
+  </div>
+
+</div>

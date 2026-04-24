@@ -1,9 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useImperativeHandle, useRef, useEffect, type Ref } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Item } from '@/lib/types'
-import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 
@@ -12,6 +11,7 @@ interface ItemInput {
   name: string
   priceStr: string
   assignedTo: string[]
+  confidence?: number
 }
 
 interface Props {
@@ -20,11 +20,19 @@ interface Props {
   tip: number
   label?: string
   onDone: (items: Item[], tax: number, tip: number, total: number, label?: string) => void
+  ref?: Ref<{ submit: () => void }>
+  onReadyChange?: (ready: boolean) => void
 }
 
-export function Review({ items: initialItems, tax: initTax, tip: initTip, label: initLabel, onDone }: Props) {
+export function Review({ items: initialItems, tax: initTax, tip: initTip, label: initLabel, onDone, ref, onReadyChange }: Props) {
   const [items, setItems] = useState<ItemInput[]>(() =>
-    initialItems.map(i => ({ id: i.id, name: i.name, priceStr: i.price ? i.price.toFixed(2) : '', assignedTo: i.assignedTo }))
+    initialItems.map(i => ({
+      id: i.id,
+      name: i.name,
+      priceStr: i.price ? i.price.toFixed(2) : '',
+      assignedTo: i.assignedTo,
+      confidence: i.confidence,
+    }))
   )
   const [tax, setTax] = useState(initTax.toFixed(2))
   const [tip, setTip] = useState(initTip.toFixed(2))
@@ -33,6 +41,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
   // Total is always derived — no editable state, so tip/tax/items can never diverge from total
   const itemsSum = items.reduce((sum, i) => sum + (parseFloat(i.priceStr) || 0), 0)
   const computedTotal = itemsSum + (parseFloat(tax) || 0) + (parseFloat(tip) || 0)
+
+  const hasLowConfidence = items.some(i => i.confidence !== undefined && i.confidence < 0.8)
 
   function formatCurrency(val: string): string {
     const num = parseFloat(val)
@@ -65,10 +75,22 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
   const hasValidItems = items.some(i => i.name.trim() && parseFloat(i.priceStr) > 0)
 
+  const submitRef = useRef<() => void>(() => {})
+  submitRef.current = handleDone
+  useImperativeHandle(ref, () => ({ submit: () => submitRef.current() }), [])
+
+  useEffect(() => {
+    onReadyChange?.(hasValidItems)
+  }, [hasValidItems, onReadyChange])
+
   return (
     <div>
       <h2 className="font-display text-2xl text-gold mb-1">Review Items</h2>
-      <p className="text-text-secondary text-sm mb-6">Fix any mistakes before assigning.</p>
+      <p className="text-text-secondary text-sm mb-1">Fix any mistakes before assigning.</p>
+      {hasLowConfidence && (
+        <p className="text-amber-400/80 text-xs mb-5">⚠ Some prices had low scan confidence — double-check those items.</p>
+      )}
+      {!hasLowConfidence && <div className="mb-6" />}
 
       <div className="mb-4">
         <label className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Restaurant</label>
@@ -82,6 +104,14 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
       <div className="flex flex-col gap-2 mb-4">
         {items.map(item => (
           <Card key={item.id} className="flex gap-2 items-center">
+            {item.confidence !== undefined && item.confidence < 0.8 && (
+              <span
+                className="text-amber-400 text-sm shrink-0"
+                title={`Scan confidence: ${Math.round(item.confidence * 100)}%`}
+              >
+                ⚠
+              </span>
+            )}
             <Input
               className="flex-1"
               value={item.name}
@@ -136,9 +166,6 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
         ))}
       </div>
 
-      <Button fullWidth onClick={handleDone} disabled={!hasValidItems}>
-        Assign Items →
-      </Button>
     </div>
   )
 }

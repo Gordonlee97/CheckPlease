@@ -1,25 +1,53 @@
 'use client'
 
-import { useState, KeyboardEvent } from 'react'
+import { useState, useEffect, useImperativeHandle, useRef, type Ref, KeyboardEvent, MouseEvent } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Person } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
+import { getSavedNames, forgetName, type SavedName } from '@/lib/savedNames'
+import { getPersonColor } from '@/lib/personColors'
 
 interface Props {
   initialPeople?: Person[]
   onDone: (people: Person[]) => void
+  ref?: Ref<{ submit: () => void }>
+  onReadyChange?: (ready: boolean) => void
 }
 
-export function AddPeople({ initialPeople, onDone }: Props) {
+export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) {
   const [people, setPeople] = useState<Person[]>(initialPeople ?? [])
   const [name, setName] = useState('')
+  const [savedNames, setSavedNames] = useState<SavedName[]>([])
 
-  function addPerson() {
-    const trimmed = name.trim()
+  useEffect(() => {
+    setSavedNames(getSavedNames())
+  }, [])
+
+  const submitRef = useRef<() => void>(() => {})
+  submitRef.current = () => onDone(people)
+  useImperativeHandle(ref, () => ({ submit: () => submitRef.current() }), [])
+
+  useEffect(() => {
+    onReadyChange?.(people.length >= 2)
+  }, [people.length, onReadyChange])
+
+  const suggestions = name.trim().length > 0
+    ? savedNames
+        .filter(s =>
+          s.name.toLowerCase().startsWith(name.trim().toLowerCase()) &&
+          !people.some(p => p.name.toLowerCase() === s.name.toLowerCase())
+        )
+        .slice(0, 5)
+    : []
+
+  function addPerson(personName?: string) {
+    const trimmed = (personName ?? name).trim()
     if (!trimmed) return
-    setPeople(p => [...p, { id: uuidv4(), name: trimmed }])
+    if (people.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) return
+    const color = getPersonColor(people.length)
+    setPeople(p => [...p, { id: uuidv4(), name: trimmed, color }])
     setName('')
   }
 
@@ -31,12 +59,18 @@ export function AddPeople({ initialPeople, onDone }: Props) {
     if (e.key === 'Enter') addPerson()
   }
 
+  function handleForget(savedName: string, e: MouseEvent) {
+    e.stopPropagation()
+    forgetName(savedName)
+    setSavedNames(prev => prev.filter(n => n.name !== savedName))
+  }
+
   return (
     <div>
       <h2 className="font-display text-2xl text-gold mb-1">Who's splitting?</h2>
       <p className="text-text-secondary text-sm mb-6">Add everyone at the table.</p>
 
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-2">
         <Input
           placeholder="Name"
           value={name}
@@ -44,14 +78,43 @@ export function AddPeople({ initialPeople, onDone }: Props) {
           onKeyDown={handleKey}
           autoFocus
         />
-        <Button onClick={addPerson} className="shrink-0">Add</Button>
+        <Button onClick={() => addPerson()} className="shrink-0">Add</Button>
       </div>
+
+      {suggestions.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {suggestions.map(s => (
+            <div
+              key={s.name}
+              className="flex items-center gap-0.5 rounded-full bg-surface border border-border pl-3 pr-1 py-1 cursor-pointer active:border-gold transition-colors"
+              onClick={() => addPerson(s.name)}
+            >
+              <span className="text-text-secondary text-sm">{s.name}</span>
+              <button
+                onClick={e => handleForget(s.name, e)}
+                className="text-border hover:text-text-secondary text-base leading-none px-1.5 py-0.5"
+                aria-label={`Forget ${s.name}`}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {people.length > 0 && (
         <div className="flex flex-col gap-2 mb-8">
           {people.map(person => (
             <Card key={person.id} className="flex items-center justify-between py-3">
-              <span className="text-text-primary">{person.name}</span>
+              <div className="flex items-center gap-2.5">
+                {person.color && (
+                  <div
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: person.color }}
+                  />
+                )}
+                <span className="text-text-primary">{person.name}</span>
+              </div>
               <button
                 onClick={() => removePerson(person.id)}
                 className="text-text-secondary hover:text-text-primary text-lg leading-none"
@@ -64,16 +127,6 @@ export function AddPeople({ initialPeople, onDone }: Props) {
         </div>
       )}
 
-      <Button
-        fullWidth
-        onClick={() => onDone(people)}
-        disabled={people.length < 2}
-      >
-        That's Everyone →
-      </Button>
-      {people.length < 2 && (
-        <p className="text-center text-text-secondary text-xs mt-2">Add at least 2 people</p>
-      )}
     </div>
   )
 }

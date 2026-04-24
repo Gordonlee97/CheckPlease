@@ -1,6 +1,9 @@
+export type Step = 'people' | 'scan' | 'review' | 'assign' | 'summary'
+
 export interface Person {
   id: string
   name: string
+  color?: string
 }
 
 export interface Item {
@@ -8,6 +11,7 @@ export interface Item {
   name: string
   price: number        // full line price (quantity already multiplied)
   assignedTo: string[] // person ids; cost splits equally among all listed
+  confidence?: number  // 0–1 from Azure DI; absent when Claude parsed
 }
 
 export interface Session {
@@ -24,7 +28,7 @@ export interface Session {
 
 export interface ScanResult {
   label?: string
-  items: Array<{ name: string; price: number }>
+  items: Array<{ name: string; price: number; confidence?: number }>
   subtotal: number
   tax: number
   tip: number
