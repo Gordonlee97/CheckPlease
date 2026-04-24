@@ -43,7 +43,8 @@
       "Bash(tasklist /FI \"PID eq 14192\")",
       "Bash(curl -s http://localhost:64842/ -o /dev/null -w \"%{http_code}\")",
       "Bash(npx tsc *)",
-      "Bash(curl -s http://localhost:3000 -o /dev/null -w \"%{http_code}\")"
+      "Bash(curl -s http://localhost:3000 -o /dev/null -w \"%{http_code}\")",
+      "Bash(python3 *)"
     ]
   }
 }

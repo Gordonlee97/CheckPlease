@@ -13,7 +13,8 @@ interface Props {
 }
 
 export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
@@ -85,28 +86,29 @@ export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: 
       <h2 className="font-display text-2xl text-gold mb-1">Scan Receipt</h2>
       <p className="text-text-secondary text-sm mb-6">Take a photo or upload from your gallery.</p>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={e => {
-          const file = e.target.files?.[0]
-          if (file) handleFileSelect(file)
-          e.target.value = ''
-        }}
-      />
+      {/* Two separate inputs — capture forces camera; no capture goes to gallery */}
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); e.target.value = '' }} />
+      <input ref={galleryRef} type="file" accept="image/*" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); e.target.value = '' }} />
 
       {/* No file selected yet */}
       {status === 'idle' && !selectedFile && (
-        <button
-          onClick={() => inputRef.current?.click()}
-          className="w-full rounded-2xl border-2 border-dashed border-border bg-surface flex flex-col items-center justify-center py-16 gap-3 active:border-gold transition-colors"
-        >
-          <span className="text-4xl">📷</span>
-          <span className="text-text-secondary text-sm">Tap to take photo</span>
-          <span className="text-text-secondary text-xs">or choose from gallery</span>
-        </button>
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => cameraRef.current?.click()}
+            className="w-full rounded-2xl border-2 border-dashed border-border bg-surface flex flex-col items-center justify-center py-12 gap-3 active:border-gold transition-colors"
+          >
+            <span className="text-4xl">📷</span>
+            <span className="text-text-secondary text-sm">Take a photo</span>
+          </button>
+          <button
+            onClick={() => galleryRef.current?.click()}
+            className="w-full rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
+          >
+            🖼 Choose from gallery
+          </button>
+        </div>
       )}
 
       {/* File selected — show preview */}
@@ -122,12 +124,20 @@ export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: 
             </div>
           )}
           <p className="text-text-secondary text-xs text-center truncate px-2">{selectedFile.name}</p>
-          <button
-            onClick={() => inputRef.current?.click()}
-            className="w-full rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
-          >
-            📷 Use a different photo
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => cameraRef.current?.click()}
+              className="flex-1 rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
+            >
+              📷 Retake
+            </button>
+            <button
+              onClick={() => galleryRef.current?.click()}
+              className="flex-1 rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
+            >
+              🖼 Gallery
+            </button>
+          </div>
         </div>
       )}
 
@@ -173,12 +183,20 @@ export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: 
             <p className="text-red-400 text-sm mb-1">Could not read receipt</p>
             <p className="text-text-secondary text-xs">{errorMsg}</p>
           </div>
-          <button
-            onClick={() => inputRef.current?.click()}
-            className="w-full rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
-          >
-            📷 Use a different photo
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => cameraRef.current?.click()}
+              className="flex-1 rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
+            >
+              📷 Retake
+            </button>
+            <button
+              onClick={() => galleryRef.current?.click()}
+              className="flex-1 rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
+            >
+              🖼 Gallery
+            </button>
+          </div>
         </div>
       )}
     </div>
