@@ -1,5 +1,5 @@
 export const PERSON_COLORS = [
-  '#d4813a', // amber
+  '#7b8fd4', // periwinkle
   '#c2546d', // rose
   '#3a9e8a', // teal
   '#8b6bc4', // violet

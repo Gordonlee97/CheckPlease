@@ -40,7 +40,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
   // Total is always derived — no editable state, so tip/tax/items can never diverge from total
   const itemsSum = items.reduce((sum, i) => sum + (parseFloat(i.priceStr) || 0), 0)
-  const computedTotal = itemsSum + (parseFloat(tax) || 0) + (parseFloat(tip) || 0)
+  const computedTotal = itemsSum + Math.max(0, parseFloat(tax) || 0) + Math.max(0, parseFloat(tip) || 0)
 
   const hasLowConfidence = items.some(i => i.confidence !== undefined && i.confidence < 0.8)
 
@@ -51,7 +51,11 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
   }
 
   function updateItem(id: string, field: 'name' | 'priceStr', value: string) {
-    setItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item))
+    setItems(prev => prev.map(item =>
+      item.id === id
+        ? { ...item, [field]: value, ...(field === 'priceStr' ? { confidence: undefined } : {}) }
+        : item
+    ))
   }
 
   function formatItem(id: string) {
@@ -70,7 +74,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
     const validItems: Item[] = items
       .filter(i => i.name.trim() && parseFloat(i.priceStr) > 0)
       .map(i => ({ id: i.id, name: i.name, price: parseFloat(i.priceStr), assignedTo: i.assignedTo }))
-    onDone(validItems, parseFloat(tax) || 0, parseFloat(tip) || 0, computedTotal, label.trim() || undefined)
+    if (validItems.length === 0) return
+    onDone(validItems, Math.max(0, parseFloat(tax) || 0), Math.max(0, parseFloat(tip) || 0), computedTotal, label.trim() || undefined)
   }
 
   const hasValidItems = items.some(i => i.name.trim() && parseFloat(i.priceStr) > 0)
@@ -85,7 +90,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
   return (
     <div>
-      <h2 className="font-display text-2xl text-gold mb-1">Review Items</h2>
+      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">Review Items</h2>
       <p className="text-text-secondary text-sm mb-1">Fix any mistakes before assigning.</p>
       {hasLowConfidence && (
         <p className="text-amber-400/80 text-xs mb-5">⚠ Some prices had low scan confidence — double-check those items.</p>

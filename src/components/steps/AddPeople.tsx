@@ -67,7 +67,7 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
 
   return (
     <div>
-      <h2 className="font-display text-2xl text-gold mb-1">Who's splitting?</h2>
+      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">Who's splitting?</h2>
       <p className="text-text-secondary text-sm mb-6">Add everyone at the table.</p>
 
       <div className="flex gap-2 mb-2">
@@ -81,26 +81,32 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
         <Button onClick={() => addPerson()} className="shrink-0">Add</Button>
       </div>
 
-      {suggestions.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {suggestions.map(s => (
-            <div
-              key={s.name}
-              className="flex items-center gap-0.5 rounded-full bg-surface border border-border pl-3 pr-1 py-1 cursor-pointer active:border-gold transition-colors"
-              onClick={() => addPerson(s.name)}
-            >
-              <span className="text-text-secondary text-sm">{s.name}</span>
-              <button
-                onClick={e => handleForget(s.name, e)}
-                className="text-border hover:text-text-secondary text-base leading-none px-1.5 py-0.5"
-                aria-label={`Forget ${s.name}`}
+      <div className="min-h-[42px] mb-2">
+        {suggestions.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {suggestions.map(s => (
+              <div
+                key={s.name}
+                className="flex items-center gap-0.5 rounded-full bg-surface border border-border pl-3 pr-1 py-1 cursor-pointer active:border-gold transition-colors"
+                onClick={() => addPerson(s.name)}
               >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+                <span className="text-text-secondary text-sm">{s.name}</span>
+                <button
+                  onClick={e => handleForget(s.name, e)}
+                  className="text-border hover:text-text-secondary text-base leading-none px-1.5 py-0.5"
+                  aria-label={`Forget ${s.name}`}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-center mb-4">
+        <div className="w-4/5 h-[3px] rounded-full bg-gradient-to-r from-transparent via-text-secondary/40 to-transparent" />
+      </div>
 
       {people.length > 0 && (
         <div className="flex flex-col gap-2 mb-8">

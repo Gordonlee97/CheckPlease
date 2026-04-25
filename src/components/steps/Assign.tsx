@@ -27,7 +27,6 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
   }
 
   function assignAll(itemId: string) {
-    const allIds = people.map(p => p.id)
     setItems(prev => prev.map(item => {
       if (item.id !== itemId) return item
       const allAssigned = allIds.every(id => item.assignedTo.includes(id))
@@ -36,9 +35,18 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
   }
 
   function splitEqually() {
-    const allIds = people.map(p => p.id)
     setItems(prev => prev.map(item => ({ ...item, assignedTo: allIds })))
   }
+
+  function clearAll() {
+    setItems(prev => prev.map(item => ({ ...item, assignedTo: [] })))
+  }
+
+  const allIds = people.map(p => p.id)
+  const isSplitEqually = people.length > 0 && items.every(item =>
+    allIds.length === item.assignedTo.length && allIds.every(id => item.assignedTo.includes(id))
+  )
+
 
   const unassigned = items.filter(i => i.assignedTo.length === 0)
   const canContinue = unassigned.length === 0
@@ -53,16 +61,28 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
 
   return (
     <div>
-      <h2 className="font-display text-2xl text-gold mb-1">Assign Items</h2>
+      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">Assign Items</h2>
       <p className="text-text-secondary text-sm mb-4">
         Tap names to assign. Tap multiple for a shared item.
       </p>
 
       <button
         onClick={splitEqually}
-        className="w-full text-center text-text-secondary text-sm py-2 mb-5 border border-dashed border-border rounded-xl active:border-gold active:text-gold transition-colors"
+        className={cn(
+          'w-full text-center text-sm py-2 mb-2 border rounded-xl transition-colors',
+          isSplitEqually
+            ? 'bg-text-primary/90 text-bg border-transparent'
+            : 'border-border text-text-secondary'
+        )}
       >
         Split equally between everyone
+      </button>
+
+      <button
+        onClick={clearAll}
+        className="w-full text-center text-sm py-2 mb-5 border border-border rounded-xl text-text-secondary/60 transition-colors"
+      >
+        Clear
       </button>
 
       <div className="flex flex-col gap-3 mb-3">
@@ -89,10 +109,10 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
                 <button
                   onClick={() => assignAll(item.id)}
                   className={cn(
-                    'rounded-full px-3 py-1 text-sm transition-colors',
+                    'rounded-full px-3 py-1 text-sm transition-colors border',
                     allAssigned
-                      ? 'bg-text-primary/90 text-bg font-semibold'
-                      : 'bg-bg border border-border text-text-secondary'
+                      ? 'bg-text-primary/90 text-bg border-transparent'
+                      : 'bg-bg border-border text-text-secondary'
                   )}
                 >
                   All
@@ -108,7 +128,7 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
                       onClick={() => toggleAssign(item.id, person.id)}
                       className="rounded-full px-3 py-1 text-sm transition-colors"
                       style={selected
-                        ? { backgroundColor: color ?? 'var(--color-gold)', color: '#0f0e0a', fontWeight: 600 }
+                        ? { backgroundColor: color ?? 'var(--color-gold)', color: '#0f0e0a', borderWidth: 1, borderStyle: 'solid', borderColor: 'transparent' }
                         : { borderWidth: 1, borderStyle: 'solid', borderColor: color ? `${color}55` : 'var(--color-border)', color: color ? `${color}bb` : 'var(--color-text-secondary)' }
                       }
                     >

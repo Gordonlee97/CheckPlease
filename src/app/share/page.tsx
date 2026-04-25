@@ -31,7 +31,7 @@ export default function SharePage() {
   const shares = computeSplit(session.people, session.items, session.tax, session.tip, session.total)
 
   return (
-    <main className="min-h-screen p-6 max-w-md mx-auto">
+    <main className="min-h-screen p-6 pb-32 max-w-md mx-auto">
       <SummaryView session={session} shares={shares} readOnly />
     </main>
   )

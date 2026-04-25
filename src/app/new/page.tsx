@@ -54,7 +54,9 @@ export default function NewSplitPage() {
   const [scannedFile, setScannedFile] = useState<File | null>(null)
   const [canProceed, setCanProceed] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [sharing, setSharing] = useState(false)
   const stepRef = useRef<StepHandle>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   function showToast(msg: string) {
     setToast(msg)
@@ -65,7 +67,26 @@ export default function NewSplitPage() {
     const currentIdx = STEP_ORDER.indexOf(step)
     const toIdx = STEP_ORDER.indexOf(toStep)
     setNavDirection(toIdx >= currentIdx ? 'forward' : 'back')
-    setCanProceed(toStep === 'summary')
+
+    // Pre-compute readiness so the button never flashes disabled on arrival (#7)
+    setCanProceed(
+      toStep === 'summary' ||
+      (toStep === 'people' && draft.people.length >= 2) ||
+      (toStep === 'scan' && !!scannedFile) ||
+      (toStep === 'review' && draft.items.some(i => i.name.trim() && i.price > 0)) ||
+      (toStep === 'assign' && draft.items.every(i => i.assignedTo.length > 0))
+    )
+
+    // Navigating back: un-complete the target step and everything forward (#5)
+    if (toIdx < currentIdx) {
+      setCompletedSteps(prev => {
+        const next = new Set(prev)
+        STEP_ORDER.slice(toIdx).forEach(s => next.delete(s))
+        return next
+      })
+    }
+
+    scrollRef.current?.scrollTo({ top: 0 })
     setStep(toStep)
   }
 
@@ -136,18 +157,30 @@ export default function NewSplitPage() {
   }
 
   async function handleShareLink() {
-    const url = buildShareUrl(session)
-    if (navigator.share) {
-      try { await navigator.share({ title: 'CheckPlease split', url }); return } catch {}
+    if (sharing) return
+    setSharing(true)
+    try {
+      const url = buildShareUrl(session)
+      if (navigator.share) {
+        try { await navigator.share({ title: 'CheckPlease split', url }); return } catch {}
+      }
+      try { await navigator.clipboard.writeText(url); showToast('Link copied!') }
+      catch { showToast('Could not copy link') }
+    } finally {
+      setSharing(false)
     }
-    try { await navigator.clipboard.writeText(url); showToast('Link copied!') }
-    catch { showToast('Could not copy link') }
   }
 
   async function handleCopyText() {
-    const text = buildPlainText(session, shares)
-    try { await navigator.clipboard.writeText(text); showToast('Copied to clipboard!') }
-    catch { showToast('Could not copy text') }
+    if (sharing) return
+    setSharing(true)
+    try {
+      const text = buildPlainText(session, shares)
+      try { await navigator.clipboard.writeText(text); showToast('Copied to clipboard!') }
+      catch { showToast('Could not copy text') }
+    } finally {
+      setSharing(false)
+    }
   }
 
   const session = {
@@ -167,76 +200,80 @@ export default function NewSplitPage() {
 
   return (
     <>
-      <main className="min-h-screen p-6 pb-32 max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          {step !== 'people' ? (
-            <button
-              onClick={goBack}
-              className="text-text-secondary hover:text-text-primary text-sm"
-            >
-              ← Back
-            </button>
-          ) : (
-            <div />
-          )}
-          <Link href="/" className="text-text-secondary hover:text-text-primary text-sm">
-            Cancel
-          </Link>
+      <main className="flex flex-col h-dvh max-w-md mx-auto">
+        <div className="shrink-0 px-6 pt-6">
+          <div className="flex items-center justify-between mb-4">
+            {step !== 'people' ? (
+              <button
+                onClick={goBack}
+                className="text-text-secondary hover:text-text-primary text-sm"
+              >
+                ← Back
+              </button>
+            ) : (
+              <div />
+            )}
+            <Link href="/" className="text-text-secondary hover:text-text-primary text-sm">
+              Cancel
+            </Link>
+          </div>
+
+          <ProgressBar
+            current={step}
+            completed={completedSteps}
+            onNavigate={navigate}
+          />
         </div>
 
-        <ProgressBar
-          current={step}
-          completed={completedSteps}
-          onNavigate={navigate}
-        />
-
-        <div key={step} className={navDirection === 'forward' ? 'animate-slide-from-right' : 'animate-slide-from-left'}>
-          {step === 'people' && (
-            <AddPeople
-              initialPeople={draft.people}
-              onDone={handlePeopleDone}
-              ref={stepRef}
-              onReadyChange={setCanProceed}
-            />
-          )}
-          {step === 'scan' && (
-            <Scan
-              initialFile={scannedFile ?? undefined}
-              onFileSelect={setScannedFile}
-              onDone={handleScanDone}
-              ref={stepRef}
-              onReadyChange={setCanProceed}
-            />
-          )}
-          {step === 'review' && (
-            <Review
-              items={draft.items}
-              tax={draft.tax}
-              tip={draft.tip}
-              label={draft.label}
-              onDone={handleReviewDone}
-              ref={stepRef}
-              onReadyChange={setCanProceed}
-            />
-          )}
-          {step === 'assign' && (
-            <Assign
-              people={draft.people}
-              items={draft.items}
-              onDone={handleAssignDone}
-              ref={stepRef}
-              onReadyChange={setCanProceed}
-            />
-          )}
-          {step === 'summary' && (
-            <SummaryView
-              session={session}
-              shares={shares}
-              onDone={handleSummaryDone}
-              ref={stepRef}
-              onReadyChange={setCanProceed}
-            />
-          )}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 px-6 pb-36">
+          <div key={step} className={navDirection === 'forward' ? 'animate-slide-from-right' : 'animate-slide-from-left'}>
+            {step === 'people' && (
+              <AddPeople
+                initialPeople={draft.people}
+                onDone={handlePeopleDone}
+                ref={stepRef}
+                onReadyChange={setCanProceed}
+              />
+            )}
+            {step === 'scan' && (
+              <Scan
+                initialFile={scannedFile ?? undefined}
+                onFileSelect={setScannedFile}
+                onDone={handleScanDone}
+                ref={stepRef}
+                onReadyChange={setCanProceed}
+              />
+            )}
+            {step === 'review' && (
+              <Review
+                items={draft.items}
+                tax={draft.tax}
+                tip={draft.tip}
+                label={draft.label}
+                onDone={handleReviewDone}
+                ref={stepRef}
+                onReadyChange={setCanProceed}
+              />
+            )}
+            {step === 'assign' && (
+              <Assign
+                people={draft.people}
+                items={draft.items}
+                onDone={handleAssignDone}
+                ref={stepRef}
+                onReadyChange={setCanProceed}
+              />
+            )}
+            {step === 'summary' && (
+              <SummaryView
+                session={session}
+                shares={shares}
+                onDone={handleSummaryDone}
+                ref={stepRef}
+                onReadyChange={setCanProceed}
+              />
+            )}
+          </div>
         </div>
       </main>
 
@@ -246,8 +283,8 @@ export default function NewSplitPage() {
           {step === 'summary' ? (
             <div className="flex flex-col gap-3">
               <div className="flex gap-3">
-                <Button fullWidth onClick={handleShareLink}>Share link</Button>
-                <Button fullWidth variant="ghost" onClick={handleCopyText}>Copy text</Button>
+                <Button fullWidth onClick={handleShareLink} disabled={sharing}>Share link</Button>
+                <Button fullWidth variant="ghost" onClick={handleCopyText} disabled={sharing}>Copy text</Button>
               </div>
               <Button fullWidth variant="green" onClick={handleSummaryDone}>Done</Button>
             </div>
@@ -256,13 +293,13 @@ export default function NewSplitPage() {
               {step === 'people' && !canProceed && (
                 <p className="text-center text-text-secondary text-xs mb-3">Add at least 2 people</p>
               )}
-              {(step !== 'scan' || canProceed) && (
+              {(step !== 'scan' || canProceed || !!scannedFile) && (
                 <Button
                   fullWidth
                   onClick={() => stepRef.current?.submit()}
                   disabled={!canProceed}
                 >
-                  {STEP_BTN_LABEL[step]}
+                  {step === 'scan' && !canProceed && scannedFile ? 'Scanning…' : STEP_BTN_LABEL[step]}
                 </Button>
               )}
             </>
@@ -271,7 +308,7 @@ export default function NewSplitPage() {
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface text-text-primary px-4 py-2 rounded-xl shadow-lg text-sm z-10">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface text-text-primary px-4 py-2 rounded-xl shadow-lg text-sm z-50">
           {toast}
         </div>
       )}

@@ -37,15 +37,17 @@ export function ProgressBar({ current, completed, onNavigate }: Props) {
               disabled={!isDone}
               className="flex flex-col items-center gap-1.5 shrink-0"
             >
-              <div className={cn(
-                'rounded-full transition-all duration-300',
-                isCurrent ? 'w-2.5 h-2.5 bg-gold' :
-                isDone    ? 'w-2 h-2 bg-gold/50'   :
-                            'w-2 h-2 bg-border'
-              )} />
+              <div className="w-3.5 h-3.5 flex items-center justify-center">
+                <div className={cn(
+                  'rounded-full transition-all duration-300',
+                  isCurrent ? 'w-3.5 h-3.5 bg-gold' :
+                  isDone    ? 'w-2 h-2 bg-gold/50'   :
+                              'w-2 h-2 bg-border'
+                )} />
+              </div>
               <span className={cn(
-                'text-[9px] uppercase tracking-wider leading-none select-none whitespace-nowrap',
-                isCurrent ? 'text-gold'          :
+                'text-[11px] uppercase tracking-wider leading-none select-none whitespace-nowrap',
+                isCurrent ? 'text-gold' :
                 isDone    ? 'text-text-secondary' :
                             'text-border'
               )}>

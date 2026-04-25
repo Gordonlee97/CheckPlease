@@ -83,7 +83,7 @@ export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: 
 
   return (
     <div>
-      <h2 className="font-display text-2xl text-gold mb-1">Scan Receipt</h2>
+      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">Scan Receipt</h2>
       <p className="text-text-secondary text-sm mb-6">Take a photo or upload from your gallery.</p>
 
       {/* Two separate inputs — capture forces camera; no capture goes to gallery */}

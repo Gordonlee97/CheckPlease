@@ -75,6 +75,7 @@ function ShareCard({ share, index, session }: ShareCardProps) {
 
 export function SummaryView({ session, shares, readOnly = false, onDone, ref, onReadyChange }: Props) {
   const [toast, setToast] = useState<string | null>(null)
+  const [sharing, setSharing] = useState(false)
 
   const submitRef = useRef<() => void>(() => {})
   submitRef.current = () => onDone?.()
@@ -90,36 +91,35 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
   }
 
   async function handleShareLink() {
-    const url = buildShareUrl(session)
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'CheckPlease split', url })
-        return
-      } catch {
-        // AbortError or other — fall through to clipboard
-      }
-    }
+    if (sharing) return
+    setSharing(true)
     try {
-      await navigator.clipboard.writeText(url)
-      showToast('Link copied to clipboard!')
-    } catch {
-      showToast('Could not copy link')
+      const url = buildShareUrl(session)
+      if (navigator.share) {
+        try { await navigator.share({ title: 'CheckPlease split', url }); return } catch {}
+      }
+      try { await navigator.clipboard.writeText(url); showToast('Link copied to clipboard!') }
+      catch { showToast('Could not copy link') }
+    } finally {
+      setSharing(false)
     }
   }
 
   async function handleCopyText() {
-    const text = buildPlainText(session, shares)
+    if (sharing) return
+    setSharing(true)
     try {
-      await navigator.clipboard.writeText(text)
-      showToast('Copied to clipboard!')
-    } catch {
-      showToast('Could not copy text')
+      const text = buildPlainText(session, shares)
+      try { await navigator.clipboard.writeText(text); showToast('Copied to clipboard!') }
+      catch { showToast('Could not copy text') }
+    } finally {
+      setSharing(false)
     }
   }
 
   return (
     <div>
-      <h2 className="font-display text-2xl text-gold mb-1">
+      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">
         {session.label ?? 'Unknown Restaurant'}
       </h2>
       <p className="text-text-secondary text-sm mb-6">
@@ -136,12 +136,12 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
         <>
           <div className="fixed bottom-0 left-0 right-0 pt-8 pb-6 bg-gradient-to-t from-bg to-transparent pointer-events-none">
             <div className="max-w-md mx-auto px-6 pointer-events-auto flex gap-3">
-              <Button fullWidth onClick={handleShareLink}>Share link</Button>
-              <Button fullWidth variant="ghost" onClick={handleCopyText}>Copy text</Button>
+              <Button fullWidth onClick={handleShareLink} disabled={sharing}>Share link</Button>
+              <Button fullWidth variant="ghost" onClick={handleCopyText} disabled={sharing}>Copy text</Button>
             </div>
           </div>
           {toast && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface text-text-primary px-4 py-2 rounded-xl shadow-lg text-sm">
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface text-text-primary px-4 py-2 rounded-xl shadow-lg text-sm z-50">
               {toast}
             </div>
           )}
