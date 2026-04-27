@@ -92,7 +92,12 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
           return (
             <Card key={item.id} className={cn(item.assignedTo.length === 0 && 'ring-1 ring-red-900/70')}>
               <div className="flex justify-between items-center mb-3">
-                <span className="text-text-primary font-medium">{item.name}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-text-primary font-medium">{item.name}</span>
+                  {item.confidence !== undefined && item.confidence < 0.8 && (
+                    <span className="text-amber-400/60 text-xs" title={`Scan confidence: ${Math.round(item.confidence * 100)}%`}>⚠</span>
+                  )}
+                </div>
                 <div className="text-right">
                   <span className="text-gold font-semibold">${item.price.toFixed(2)}</span>
                   {/* Always rendered so card height never shifts — invisible when only 1 assigned */}

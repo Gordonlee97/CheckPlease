@@ -21,7 +21,7 @@ export function buildShareUrl(session: Session): string {
   return `${window.location.origin}/share#${encoded}`
 }
 
-export function buildPlainText(session: Session, shares: PersonShare[]): string {
+export function buildPlainText(session: Session, shares: PersonShare[], myVenmoHandle?: string): string {
   const date = new Date(session.createdAt).toLocaleDateString()
   const header = `CheckPlease — ${session.label ?? 'Dinner'} ${date}`
 
@@ -36,5 +36,7 @@ export function buildPlainText(session: Session, shares: PersonShare[]): string 
     ].join('\n')
   })
 
-  return [header, '', ...lines].join('\n')
+  const footer = myVenmoHandle ? `\nSend payment to @${myVenmoHandle} on Venmo` : ''
+
+  return [header, '', ...lines].join('\n') + footer
 }

@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { v4 as uuidv4 } from 'uuid'
 import type { Person, Item, ScanResult, Step } from '@/lib/types'
 import { saveSession } from '@/lib/storage'
 import { recordNames } from '@/lib/savedNames'
 import { buildShareUrl, buildPlainText } from '@/lib/share'
+import { getSavedGroup } from '@/lib/savedGroups'
+import { getMyVenmoHandle } from '@/lib/userSettings'
 import Link from 'next/link'
 import { AddPeople } from '@/components/steps/AddPeople'
 import { Scan } from '@/components/steps/Scan'
@@ -49,10 +51,27 @@ export default function NewSplitPage() {
   const [navDirection, setNavDirection] = useState<'forward' | 'back'>('forward')
   const [completedSteps, setCompletedSteps] = useState<Set<Step>>(new Set())
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
+  const [addPeopleKey, setAddPeopleKey] = useState(0)
   const [sessionId] = useState(() => uuidv4())
   const [createdAt] = useState(() => new Date().toISOString())
   const [scannedFile, setScannedFile] = useState<File | null>(null)
   const [canProceed, setCanProceed] = useState(false)
+
+  useEffect(() => {
+    const groupId = new URLSearchParams(window.location.search).get('group')
+    if (!groupId) return
+    const group = getSavedGroup(groupId)
+    if (!group) return
+    const people = group.people.map(gp => ({
+      id: uuidv4(),
+      name: gp.name,
+      color: gp.color,
+      venmoHandle: gp.venmoHandle,
+    }))
+    setDraft(d => ({ ...d, people }))
+    setCanProceed(people.length >= 2)
+    setAddPeopleKey(k => k + 1) // remount AddPeople with new initialPeople
+  }, [])
   const [toast, setToast] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
   const stepRef = useRef<StepHandle>(null)
@@ -175,7 +194,7 @@ export default function NewSplitPage() {
     if (sharing) return
     setSharing(true)
     try {
-      const text = buildPlainText(session, shares)
+      const text = buildPlainText(session, shares, getMyVenmoHandle())
       try { await navigator.clipboard.writeText(text); showToast('Copied to clipboard!') }
       catch { showToast('Could not copy text') }
     } finally {
@@ -229,6 +248,7 @@ export default function NewSplitPage() {
           <div key={step} className={navDirection === 'forward' ? 'animate-slide-from-right' : 'animate-slide-from-left'}>
             {step === 'people' && (
               <AddPeople
+                key={addPeopleKey}
                 initialPeople={draft.people}
                 onDone={handlePeopleDone}
                 ref={stepRef}

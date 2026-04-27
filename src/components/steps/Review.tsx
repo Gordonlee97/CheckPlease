@@ -70,10 +70,19 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
     setItems(prev => [...prev, { id: uuidv4(), name: '', priceStr: '', assignedTo: [] }])
   }
 
+  function focusNextReviewInput(currentEl: HTMLElement) {
+    const all = Array.from(document.querySelectorAll<HTMLInputElement>('[data-review-input]'))
+    const idx = all.indexOf(currentEl as HTMLInputElement)
+    if (idx >= 0 && idx < all.length - 1) {
+      all[idx + 1].focus()
+      all[idx + 1].select()
+    }
+  }
+
   function handleDone() {
     const validItems: Item[] = items
       .filter(i => i.name.trim() && parseFloat(i.priceStr) > 0)
-      .map(i => ({ id: i.id, name: i.name, price: parseFloat(i.priceStr), assignedTo: i.assignedTo }))
+      .map(i => ({ id: i.id, name: i.name, price: parseFloat(i.priceStr), assignedTo: i.assignedTo, confidence: i.confidence }))
     if (validItems.length === 0) return
     onDone(validItems, Math.max(0, parseFloat(tax) || 0), Math.max(0, parseFloat(tip) || 0), computedTotal, label.trim() || undefined)
   }
@@ -121,7 +130,9 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
               className="flex-1"
               value={item.name}
               onChange={e => updateItem(item.id, 'name', e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') focusNextReviewInput(e.currentTarget) }}
               placeholder="Item name"
+              data-review-input
             />
             <div className="flex items-center gap-1 shrink-0 w-24">
               <span className="text-text-secondary text-sm shrink-0">$</span>
@@ -132,6 +143,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
                 value={item.priceStr}
                 onChange={e => updateItem(item.id, 'priceStr', e.target.value)}
                 onBlur={() => formatItem(item.id)}
+                onKeyDown={e => { if (e.key === 'Enter') { formatItem(item.id); focusNextReviewInput(e.currentTarget) } }}
+                data-review-input
               />
             </div>
             <button
@@ -154,8 +167,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
       <div className="grid grid-cols-3 gap-2 mb-8">
         {([
-          { label: 'Tax', content: <Input type="text" inputMode="decimal" value={tax} onChange={e => setTax(e.target.value)} onBlur={() => setTax(formatCurrency(tax))} className="text-right" /> },
-          { label: 'Tip', content: <Input type="text" inputMode="decimal" value={tip} onChange={e => setTip(e.target.value)} onBlur={() => setTip(formatCurrency(tip))} className="text-right" /> },
+          { label: 'Tax', content: <Input type="text" inputMode="decimal" value={tax} onChange={e => setTax(e.target.value)} onBlur={() => setTax(formatCurrency(tax))} onKeyDown={e => { if (e.key === 'Enter') focusNextReviewInput(e.currentTarget) }} className="text-right" data-review-input /> },
+          { label: 'Tip', content: <Input type="text" inputMode="decimal" value={tip} onChange={e => setTip(e.target.value)} onBlur={() => setTip(formatCurrency(tip))} onKeyDown={e => { if (e.key === 'Enter') setTip(formatCurrency(tip)) }} className="text-right" data-review-input /> },
           { label: 'Total', content: <Input readOnly value={computedTotal.toFixed(2)} className="text-right opacity-50 cursor-default" /> },
         ] as const).map(({ label, content }) => (
           <div key={label}>

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { getSavedNames, forgetName, type SavedName } from '@/lib/savedNames'
 import { getPersonColor } from '@/lib/personColors'
+import { saveGroup, getSavedGroups, type SavedGroup } from '@/lib/savedGroups'
 
 interface Props {
   initialPeople?: Person[]
@@ -20,9 +21,16 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
   const [people, setPeople] = useState<Person[]>(initialPeople ?? [])
   const [name, setName] = useState('')
   const [savedNames, setSavedNames] = useState<SavedName[]>([])
+  const [savingGroup, setSavingGroup] = useState(false)
+  const [groupName, setGroupName] = useState('')
+  // Names snapshot taken at save time — show "Group saved!" while people still match it
+  const [savedSnapshot, setSavedSnapshot] = useState<string[] | null>(null)
+  const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
+  const [showGroupPicker, setShowGroupPicker] = useState(false)
 
   useEffect(() => {
     setSavedNames(getSavedNames())
+    setSavedGroups(getSavedGroups())
   }, [])
 
   const submitRef = useRef<() => void>(() => {})
@@ -32,6 +40,11 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
   useEffect(() => {
     onReadyChange?.(people.length >= 2)
   }, [people.length, onReadyChange])
+
+  const currentNames = people.map(p => p.name)
+  const groupSavedVisible = savedSnapshot !== null &&
+    savedSnapshot.length === currentNames.length &&
+    savedSnapshot.every((n, i) => currentNames[i] === n)
 
   const suggestions = name.trim().length > 0
     ? savedNames
@@ -49,10 +62,22 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
     const color = getPersonColor(people.length)
     setPeople(p => [...p, { id: uuidv4(), name: trimmed, color }])
     setName('')
+    setShowGroupPicker(false)
   }
 
   function removePerson(id: string) {
     setPeople(p => p.filter(person => person.id !== id))
+  }
+
+  function loadGroup(group: SavedGroup) {
+    const loaded = group.people.map((gp, i) => ({
+      id: uuidv4(),
+      name: gp.name,
+      color: gp.color ?? getPersonColor(i),
+      venmoHandle: gp.venmoHandle,
+    }))
+    setPeople(loaded)
+    setShowGroupPicker(false)
   }
 
   function handleKey(e: KeyboardEvent<HTMLInputElement>) {
@@ -63,6 +88,18 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
     e.stopPropagation()
     forgetName(savedName)
     setSavedNames(prev => prev.filter(n => n.name !== savedName))
+  }
+
+  function confirmSaveGroup() {
+    const trimmed = groupName.trim()
+    if (!trimmed) return
+    saveGroup({
+      name: trimmed,
+      people: people.map(p => ({ name: p.name, color: p.color ?? getPersonColor(0), venmoHandle: p.venmoHandle })),
+    })
+    setSavingGroup(false)
+    setGroupName('')
+    setSavedSnapshot(currentNames.slice())
   }
 
   return (
@@ -108,8 +145,41 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
         <div className="w-4/5 h-[3px] rounded-full bg-gradient-to-r from-transparent via-text-secondary/40 to-transparent" />
       </div>
 
+      {/* Group picker — only when list is empty */}
+      {people.length === 0 && savedGroups.length > 0 && (
+        <div className="mb-4">
+          {!showGroupPicker ? (
+            <button
+              onClick={() => setShowGroupPicker(true)}
+              className="w-full border border-border bg-surface rounded-xl py-2.5 text-sm text-text-secondary hover:border-gold/50 hover:text-text-primary transition-colors"
+            >
+              Add from group
+            </button>
+          ) : (
+            <div className="flex flex-col gap-2 animate-fade-in">
+              {savedGroups.map(group => (
+                <button
+                  key={group.id}
+                  onClick={() => loadGroup(group)}
+                  className="w-full text-left px-4 py-3 rounded-xl border border-border hover:border-gold transition-colors"
+                >
+                  <p className="text-text-primary text-sm font-medium">{group.name}</p>
+                  <p className="text-text-secondary text-xs mt-0.5">{group.people.map(p => p.name).join(', ')}</p>
+                </button>
+              ))}
+              <button
+                onClick={() => setShowGroupPicker(false)}
+                className="text-text-secondary/40 text-xs py-1 text-center"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {people.length > 0 && (
-        <div className="flex flex-col gap-2 mb-8">
+        <div className="flex flex-col gap-2 mb-4">
           {people.map(person => (
             <Card key={person.id} className="flex items-center justify-between py-3">
               <div className="flex items-center gap-2.5">
@@ -119,7 +189,12 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
                     style={{ backgroundColor: person.color }}
                   />
                 )}
-                <span className="text-text-primary">{person.name}</span>
+                <div>
+                  <span className="text-text-primary">{person.name}</span>
+                  {person.venmoHandle && (
+                    <p className="text-text-secondary/40 text-xs">@{person.venmoHandle}</p>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => removePerson(person.id)}
@@ -133,6 +208,37 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
         </div>
       )}
 
+      {people.length >= 2 && !savingGroup && !groupSavedVisible && (
+        <button
+          onClick={() => setSavingGroup(true)}
+          className="w-full text-center text-text-secondary/40 text-xs py-2 hover:text-text-secondary/70 transition-colors"
+        >
+          Save as group
+        </button>
+      )}
+
+      {groupSavedVisible && (
+        <p className="w-full text-center text-gold/70 text-xs py-2 animate-fade-in-delayed">Group saved!</p>
+      )}
+
+      {savingGroup && (
+        <div className="flex gap-2 items-center mt-1">
+          <input
+            autoFocus
+            type="text"
+            placeholder="Group name (e.g. Roommates)"
+            value={groupName}
+            onChange={e => setGroupName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') confirmSaveGroup()
+              if (e.key === 'Escape') setSavingGroup(false)
+            }}
+            className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-secondary/40 outline-none border-b border-gold/50 pb-0.5 focus:border-gold transition-colors"
+          />
+          <button onClick={confirmSaveGroup} className="text-gold text-xs shrink-0">Save</button>
+          <button onClick={() => setSavingGroup(false)} className="text-text-secondary/40 text-xs shrink-0">Cancel</button>
+        </div>
+      )}
     </div>
   )
 }

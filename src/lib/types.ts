@@ -4,6 +4,7 @@ export interface Person {
   id: string
   name: string
   color?: string
+  venmoHandle?: string
 }
 
 export interface Item {

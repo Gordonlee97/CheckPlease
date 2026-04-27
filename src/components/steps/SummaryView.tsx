@@ -4,6 +4,7 @@ import { useState, useEffect, useImperativeHandle, useRef, type Ref } from 'reac
 import type { Session } from '@/lib/types'
 import type { PersonShare } from '@/lib/splitting'
 import { buildShareUrl, buildPlainText } from '@/lib/share'
+import { getMyVenmoHandle } from '@/lib/userSettings'
 import { Button } from '@/components/ui/Button'
 
 interface Props {
@@ -45,6 +46,12 @@ function ShareCard({ share, index, session }: ShareCardProps) {
   const animatedTotal = useCountUp(share.total, index * 110)
   const person = session.people.find(p => p.id === share.personId)
   const color = person?.color ?? '#c9a84c'
+  const venmoHandle = person?.venmoHandle
+  const note = encodeURIComponent(session.label ?? 'Dinner')
+
+  const venmoUrl = venmoHandle
+    ? `venmo://paycharge?txn=charge&recipients=${venmoHandle}&amount=${share.total.toFixed(2)}&note=${note}`
+    : `venmo://paycharge?txn=charge&amount=${share.total.toFixed(2)}&note=${note}`
 
   return (
     <div
@@ -63,11 +70,19 @@ function ShareCard({ share, index, session }: ShareCardProps) {
         <p className="text-text-secondary text-xs">
           {share.assignedItems.map(i => i.shared ? `${i.name} (shared)` : i.name).join(' · ')}
         </p>
-        <p className="text-[11px] text-text-secondary/50 pt-1 border-t border-border">
-          Items ${share.itemSubtotal.toFixed(2)}
-          {session.tax > 0 && ` · Tax $${share.taxShare.toFixed(2)}`}
-          {session.tip > 0 && ` · Tip $${share.tipShare.toFixed(2)}`}
-        </p>
+        <div className="flex items-center justify-between pt-1 border-t border-border">
+          <p className="text-[11px] text-text-secondary/50">
+            Items ${share.itemSubtotal.toFixed(2)}
+            {session.tax > 0 && ` · Tax $${share.taxShare.toFixed(2)}`}
+            {session.tip > 0 && ` · Tip $${share.tipShare.toFixed(2)}`}
+          </p>
+          <a
+            href={venmoUrl}
+            className="text-[11px] text-[#008CFF]/70 hover:text-[#008CFF] transition-colors shrink-0 ml-3"
+          >
+            Request on Venmo
+          </a>
+        </div>
       </div>
     </div>
   )
@@ -109,7 +124,7 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
     if (sharing) return
     setSharing(true)
     try {
-      const text = buildPlainText(session, shares)
+      const text = buildPlainText(session, shares, getMyVenmoHandle())
       try { await navigator.clipboard.writeText(text); showToast('Copied to clipboard!') }
       catch { showToast('Could not copy text') }
     } finally {
