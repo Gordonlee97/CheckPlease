@@ -24,7 +24,7 @@ export default function GroupsPage() {
     <main className={`min-h-screen p-6 max-w-md mx-auto pb-16 ${exiting ? 'animate-page-exit' : 'animate-page-enter'}`}>
       <div className="flex items-center justify-between mb-6">
         <button onClick={handleBack} className="text-text-secondary hover:text-text-primary text-sm">← Back</button>
-        <Link href="/groups/new" className="border border-border bg-surface rounded-lg px-3 py-1 text-xs text-text-secondary hover:border-gold/50 hover:text-text-primary transition-colors">
+        <Link href="/groups/new" className="border border-border/60 rounded-lg px-3 py-1 text-xs text-text-secondary/65 hover:border-border hover:text-text-secondary transition-colors">
           + New group
         </Link>
       </div>

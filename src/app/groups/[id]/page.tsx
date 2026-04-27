@@ -79,7 +79,9 @@ export default function GroupEditorPage({ params }: { params: Promise<{ id: stri
   const canSave = groupName.trim().length > 0 && people.length >= 1
 
   return (
-    <main className={`min-h-screen p-6 pb-32 max-w-md mx-auto ${exiting ? 'animate-page-exit' : 'animate-page-enter'}`}>
+    <>
+    <main className="min-h-screen max-w-md mx-auto">
+      <div className={`p-6 pb-32 ${exiting ? 'animate-page-exit' : 'animate-page-enter'}`}>
       <div className="flex items-center justify-between mb-6">
         <button onClick={exit} className="text-text-secondary hover:text-text-primary text-sm">← Back</button>
         {!isNew && !confirmDelete && (
@@ -155,15 +157,16 @@ export default function GroupEditorPage({ params }: { params: Promise<{ id: stri
         ))}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 pt-8 pb-6 bg-gradient-to-t from-bg to-transparent pointer-events-none">
-        <div className="max-w-md mx-auto px-6 pointer-events-auto">
-          <Button fullWidth onClick={handleSave} disabled={!canSave}>
-            Save group
-          </Button>
-        </div>
       </div>
-
-
     </main>
+
+    <div className="fixed bottom-0 left-0 right-0 pt-8 pb-6 bg-gradient-to-t from-bg to-transparent pointer-events-none">
+      <div className="max-w-md mx-auto px-6 pointer-events-auto">
+        <Button fullWidth onClick={handleSave} disabled={!canSave}>
+          Save group
+        </Button>
+      </div>
+    </div>
+    </>
   )
 }

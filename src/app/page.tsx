@@ -75,7 +75,7 @@ export default function Home() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-text-secondary text-xs uppercase tracking-widest">Groups</h2>
-            <Link href="/groups/new" className="border border-border bg-surface rounded-lg px-3 py-1 text-xs text-text-secondary hover:border-gold/50 hover:text-text-primary transition-colors">
+            <Link href="/groups/new" className="border border-border/60 rounded-lg px-3 py-1 text-xs text-text-secondary/65 hover:border-border hover:text-text-secondary transition-colors">
               + New
             </Link>
           </div>

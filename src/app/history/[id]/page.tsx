@@ -25,9 +25,10 @@ export default function HistoryPage() {
   const shares = computeSplit(session.people, session.items, session.tax, session.tip, session.total)
   return (
     <main className="min-h-screen p-6 pb-32 max-w-md mx-auto">
-      <Link href="/" className="text-text-secondary text-sm mb-6 block hover:text-text-primary">
-        ← All splits
-      </Link>
+      <div className="flex items-center justify-between mb-6">
+        <Link href="/" className="text-text-secondary text-sm hover:text-text-primary">← Home</Link>
+        <Link href="/splits" className="text-text-secondary text-sm hover:text-text-primary">All splits →</Link>
+      </div>
       <SummaryView session={session} shares={shares} readOnly />
     </main>
   )
