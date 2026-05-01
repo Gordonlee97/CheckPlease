@@ -44,38 +44,39 @@ export default function Home() {
   return (
     <>
       <main className="min-h-screen p-6 max-w-md mx-auto pb-32">
-        <div className="flex items-start justify-between mb-1">
-          <h1 className="font-display text-3xl text-gold">CheckPlease</h1>
-          <div className="text-right pt-1">
-            {editingVenmo ? (
-              <div className="flex items-center gap-2">
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="@yourhandle"
-                  value={venmoInput}
-                  onChange={e => setVenmoInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') saveVenmo()
-                    if (e.key === 'Escape') setEditingVenmo(false)
-                  }}
-                  className="bg-transparent text-sm text-text-primary placeholder:text-text-secondary/40 outline-none border-b border-gold/50 pb-0.5 w-32 text-right"
-                />
-                <button onClick={saveVenmo} className="text-gold text-xs">Save</button>
-              </div>
-            ) : (
-              <button onClick={startEditVenmo} className="text-text-secondary/50 text-xs hover:text-text-secondary transition-colors">
+        <div className="mb-1">
+          <div className="flex items-start justify-between">
+            <h1 className="font-display text-3xl text-gold">CheckPlease</h1>
+            {!editingVenmo && (
+              <button onClick={startEditVenmo} className="text-text-secondary/50 text-xs hover:text-text-secondary transition-colors pt-1">
                 {venmoHandle ? `@${venmoHandle}` : 'Add your Venmo'}
               </button>
             )}
           </div>
+          {editingVenmo && (
+            <div className="flex items-center gap-2 mt-1.5">
+              <input
+                autoFocus
+                type="text"
+                placeholder="@yourhandle"
+                value={venmoInput}
+                onChange={e => setVenmoInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') saveVenmo()
+                  if (e.key === 'Escape') setEditingVenmo(false)
+                }}
+                className="flex-1 min-w-0 bg-transparent text-sm text-text-primary placeholder:text-text-secondary/40 outline-none border-b border-gold/50 pb-0.5 text-right"
+              />
+              <button onClick={saveVenmo} className="text-gold text-xs shrink-0">Save</button>
+            </div>
+          )}
         </div>
         <div className="mb-8" />
         {/* Groups */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-text-secondary text-xs uppercase tracking-widest">Groups</h2>
-            <Link href="/groups/new" className="border border-border/60 rounded-lg px-3 py-1 text-xs text-text-secondary/65 hover:border-border hover:text-text-secondary transition-colors">
+            <Link href="/groups/edit?id=new" className="border border-border/60 rounded-lg px-3 py-1 text-xs text-text-secondary/65 hover:border-border hover:text-text-secondary transition-colors">
               + New
             </Link>
           </div>
@@ -100,7 +101,7 @@ export default function Home() {
                         </div>
                       </Card>
                     </Link>
-                    <Link href={`/groups/${group.id}`} className="text-text-secondary/40 hover:text-text-secondary text-xs transition-colors px-1 shrink-0">
+                    <Link href={`/groups/edit?id=${group.id}`} className="text-text-secondary/40 hover:text-text-secondary text-xs transition-colors px-1 shrink-0">
                       Edit
                     </Link>
                   </div>
@@ -125,7 +126,7 @@ export default function Home() {
             <h2 className="text-text-secondary text-xs uppercase tracking-widest mb-3">Recent Splits</h2>
             <div className="flex flex-col gap-3">
               {recentSessions.map(session => (
-                <Link key={session.id} href={`/history/${session.id}`}>
+                <Link key={session.id} href={`/history?id=${session.id}`}>
                   <Card className="flex items-center justify-between hover:border-gold transition-colors cursor-pointer">
                     <div>
                       <p className="text-text-primary font-medium">{session.label ?? 'Unknown Restaurant'}</p>
@@ -153,7 +154,7 @@ export default function Home() {
         )}
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 pt-10 pb-6 bg-gradient-to-t from-bg to-transparent pointer-events-none">
+      <div className="fixed bottom-0 left-0 right-0 pt-10 pb-6-safe bg-gradient-to-t from-bg to-transparent pointer-events-none">
         <div className="max-w-md mx-auto px-6 pointer-events-auto">
           <Link href="/new">
             <Button fullWidth>+ New Split</Button>

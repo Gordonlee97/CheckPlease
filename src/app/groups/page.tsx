@@ -24,7 +24,7 @@ export default function GroupsPage() {
     <main className={`min-h-screen p-6 max-w-md mx-auto pb-16 ${exiting ? 'animate-page-exit' : 'animate-page-enter'}`}>
       <div className="flex items-center justify-between mb-6">
         <button onClick={handleBack} className="text-text-secondary hover:text-text-primary text-sm">← Back</button>
-        <Link href="/groups/new" className="border border-border/60 rounded-lg px-3 py-1 text-xs text-text-secondary/65 hover:border-border hover:text-text-secondary transition-colors">
+        <Link href="/groups/edit?id=new" className="border border-border/60 rounded-lg px-3 py-1 text-xs text-text-secondary/65 hover:border-border hover:text-text-secondary transition-colors">
           + New group
         </Link>
       </div>
@@ -34,7 +34,7 @@ export default function GroupsPage() {
       {groups.length === 0 ? (
         <div className="flex flex-col items-start gap-3 ml-4">
           <p className="text-text-secondary/50 text-sm">No groups yet. Create one to speed up future splits.</p>
-          <Link href="/groups/new" className="text-sm text-gold/70 hover:text-gold transition-colors">
+          <Link href="/groups/edit?id=new" className="text-sm text-gold/70 hover:text-gold transition-colors">
             + Create your first group
           </Link>
         </div>
@@ -57,7 +57,7 @@ export default function GroupsPage() {
                   </div>
                 </Card>
               </Link>
-              <Link href={`/groups/${group.id}`} className="text-text-secondary/40 hover:text-text-secondary text-xs transition-colors px-1 shrink-0">
+              <Link href={`/groups/edit?id=${group.id}`} className="text-text-secondary/40 hover:text-text-secondary text-xs transition-colors px-1 shrink-0">
                 Edit
               </Link>
             </div>

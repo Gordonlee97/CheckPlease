@@ -41,7 +41,7 @@ export default function SplitsPage() {
         <>
           <div className="flex flex-col gap-3">
             {shown.map(session => (
-              <Link key={session.id} href={`/history/${session.id}`}>
+              <Link key={session.id} href={`/history?id=${session.id}`}>
                 <Card className="flex items-center justify-between hover:border-gold transition-colors cursor-pointer">
                   <div>
                     <p className="text-text-primary font-medium">{session.label ?? 'Unknown Restaurant'}</p>

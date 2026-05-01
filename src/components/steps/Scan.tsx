@@ -68,7 +68,7 @@ export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: 
       const form = new FormData()
       form.append('image', base64)
 
-      const res = await fetch('/api/scan', { method: 'POST', body: form })
+      const res = await fetch(process.env.NEXT_PUBLIC_SCAN_API_URL || '/api/scan', { method: 'POST', body: form })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? 'Scan failed')

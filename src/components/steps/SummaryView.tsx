@@ -3,7 +3,7 @@
 import { useState, useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 import type { Session } from '@/lib/types'
 import type { PersonShare } from '@/lib/splitting'
-import { buildShareUrl, buildPlainText } from '@/lib/share'
+import { buildShareUrl, buildPlainText, buildVenmoRequestAllUrl } from '@/lib/share'
 import { getMyVenmoHandle } from '@/lib/userSettings'
 import { Button } from '@/components/ui/Button'
 
@@ -76,12 +76,12 @@ function ShareCard({ share, index, session }: ShareCardProps) {
             {session.tax > 0 && ` · Tax $${share.taxShare.toFixed(2)}`}
             {session.tip > 0 && ` · Tip $${share.tipShare.toFixed(2)}`}
           </p>
-          <a
-            href={venmoUrl}
+          <button
+            onClick={() => window.open(venmoUrl, '_system')}
             className="text-[11px] text-[#008CFF]/70 hover:text-[#008CFF] transition-colors shrink-0 ml-3"
           >
             Request on Venmo
-          </a>
+          </button>
         </div>
       </div>
     </div>
@@ -91,6 +91,7 @@ function ShareCard({ share, index, session }: ShareCardProps) {
 export function SummaryView({ session, shares, readOnly = false, onDone, ref, onReadyChange }: Props) {
   const [toast, setToast] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
+  const allVenmoUrl = buildVenmoRequestAllUrl(session, shares, getMyVenmoHandle() ?? undefined)
 
   const submitRef = useRef<() => void>(() => {})
   submitRef.current = () => onDone?.()
@@ -141,15 +142,26 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
         {new Date(session.createdAt).toLocaleDateString()} · {session.people.length} people · ${session.total.toFixed(2)} total
       </p>
 
-      <div className="flex flex-col gap-3 mb-8">
+      <div className="flex flex-col gap-3 mb-4">
         {shares.map((share, idx) => (
           <ShareCard key={share.personId} share={share} index={idx} session={session} />
         ))}
       </div>
 
+      {allVenmoUrl && (
+        <div className="flex justify-end mb-6 pr-1">
+          <button
+            onClick={() => window.open(allVenmoUrl, '_system')}
+            className="text-[11px] text-[#008CFF]/70 hover:text-[#008CFF] transition-colors"
+          >
+            Request all on Venmo
+          </button>
+        </div>
+      )}
+
       {readOnly && (
         <>
-          <div className="fixed bottom-0 left-0 right-0 pt-8 pb-6 bg-gradient-to-t from-bg to-transparent pointer-events-none">
+          <div className="fixed bottom-0 left-0 right-0 pt-8 pb-6-safe bg-gradient-to-t from-bg to-transparent pointer-events-none">
             <div className="max-w-md mx-auto px-6 pointer-events-auto flex gap-3">
               <Button fullWidth onClick={handleShareLink} disabled={sharing}>Share link</Button>
               <Button fullWidth variant="ghost" onClick={handleCopyText} disabled={sharing}>Copy text</Button>

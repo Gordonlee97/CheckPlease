@@ -1,19 +1,21 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getSession } from '@/lib/storage'
 import { computeSplit } from '@/lib/splitting'
 import type { Session } from '@/lib/types'
 import { SummaryView } from '@/components/steps/SummaryView'
 
-export default function HistoryPage() {
-  const { id } = useParams<{ id: string }>()
+function HistoryContent() {
+  const searchParams = useSearchParams()
+  const id = searchParams.get('id') ?? ''
   const router = useRouter()
   const [session, setSession] = useState<Session | null>(null)
 
   useEffect(() => {
+    if (!id) { router.replace('/'); return }
     getSession(id).then(s => {
       if (!s) router.replace('/')
       else setSession(s)
@@ -31,5 +33,13 @@ export default function HistoryPage() {
       </div>
       <SummaryView session={session} shares={shares} readOnly />
     </main>
+  )
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense fallback={null}>
+      <HistoryContent />
+    </Suspense>
   )
 }

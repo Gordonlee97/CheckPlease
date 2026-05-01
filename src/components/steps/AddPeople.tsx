@@ -69,6 +69,11 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
     setPeople(p => p.filter(person => person.id !== id))
   }
 
+  function updateVenmo(id: string, raw: string) {
+    const handle = raw.replace(/^@/, '').trim()
+    setPeople(prev => prev.map(p => p.id === id ? { ...p, venmoHandle: handle || undefined } : p))
+  }
+
   function loadGroup(group: SavedGroup) {
     const loaded = group.people.map((gp, i) => ({
       id: uuidv4(),
@@ -181,28 +186,35 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
       {people.length > 0 && (
         <div className="flex flex-col gap-2 mb-4">
           {people.map(person => (
-            <Card key={person.id} className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-2.5">
-                {person.color && (
-                  <div
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: person.color }}
-                  />
-                )}
-                <div>
-                  <span className="text-text-primary">{person.name}</span>
-                  {person.venmoHandle && (
-                    <p className="text-text-secondary/40 text-xs">@{person.venmoHandle}</p>
+            <Card key={person.id} className="py-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  {person.color && (
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: person.color }}
+                    />
                   )}
+                  <span className="text-text-primary">{person.name}</span>
                 </div>
+                <button
+                  onClick={() => removePerson(person.id)}
+                  className="text-text-secondary hover:text-text-primary text-lg leading-none"
+                  aria-label={`Remove ${person.name}`}
+                >
+                  ×
+                </button>
               </div>
-              <button
-                onClick={() => removePerson(person.id)}
-                className="text-text-secondary hover:text-text-primary text-lg leading-none"
-                aria-label={`Remove ${person.name}`}
-              >
-                ×
-              </button>
+              <div className="flex items-center gap-2 pl-5">
+                <span className="text-text-secondary/50 text-sm">@</span>
+                <input
+                  type="text"
+                  placeholder="venmo handle (optional)"
+                  value={person.venmoHandle ?? ''}
+                  onChange={e => updateVenmo(person.id, e.target.value)}
+                  className="flex-1 bg-transparent text-sm text-text-secondary placeholder:text-text-secondary/30 outline-none border-b border-border/40 pb-0.5 focus:border-gold/50 transition-colors"
+                />
+              </div>
             </Card>
           ))}
         </div>

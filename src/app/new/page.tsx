@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Person, Item, ScanResult, Step } from '@/lib/types'
 import { saveSession } from '@/lib/storage'
 import { recordNames } from '@/lib/savedNames'
-import { buildShareUrl, buildPlainText } from '@/lib/share'
+import { buildShareUrl, buildPlainText, buildVenmoRequestAllUrl } from '@/lib/share'
 import { getSavedGroup } from '@/lib/savedGroups'
 import { getMyVenmoHandle } from '@/lib/userSettings'
 import Link from 'next/link'
@@ -216,6 +216,7 @@ export default function NewSplitPage() {
   const shares = step === 'summary'
     ? computeSplit(draft.people, draft.items, draft.tax, draft.tip, draft.total)
     : []
+  const allVenmoUrl = buildVenmoRequestAllUrl(session, shares, getMyVenmoHandle() ?? undefined)
 
   return (
     <>
@@ -298,7 +299,7 @@ export default function NewSplitPage() {
       </main>
 
       {/* Fixed bottom bar — sibling of animated wrapper, never inside a CSS transform */}
-      <div className="fixed bottom-0 left-0 right-0 pt-8 pb-6 bg-gradient-to-t from-bg to-transparent pointer-events-none">
+      <div className="fixed bottom-0 left-0 right-0 pt-8 pb-6-safe bg-gradient-to-t from-bg to-transparent pointer-events-none">
         <div className="max-w-md mx-auto px-6 pointer-events-auto">
           {step === 'summary' ? (
             <div className="flex flex-col gap-3">

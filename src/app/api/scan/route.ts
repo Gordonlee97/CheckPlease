@@ -3,10 +3,34 @@ import Anthropic from '@anthropic-ai/sdk'
 import { parseAzureResponse, parseClaudeResponse } from '@/lib/ocr'
 import type { ScanResult } from '@/lib/types'
 
+export const maxDuration = 60
+
 const AZURE_API_VERSION = '2024-11-30'
 const AZURE_MODEL = 'prebuilt-receipt'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+const ALLOWED_ORIGINS = [
+  'capacitor://localhost',
+  'http://localhost',
+  'http://localhost:3000',
+  'https://checkplease.vercel.app',
+]
+
+function corsHeaders(origin: string | null) {
+  const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ''
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, X-App-Secret',
+    'Access-Control-Max-Age': '86400',
+  }
+}
+
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) })
+}
 
 async function analyzeWithAzure(base64Image: string): Promise<ScanResult | null> {
   const endpoint = process.env.AZURE_DI_ENDPOINT?.replace(/\/$/, '')
@@ -76,11 +100,14 @@ Each item's price should be the full line total (quantity × unit price already 
 }
 
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  const headers = corsHeaders(origin)
+
   try {
     const formData = await req.formData()
     const base64Image = formData.get('image') as string | null
     if (!base64Image) {
-      return NextResponse.json({ error: 'No image provided' }, { status: 400 })
+      return NextResponse.json({ error: 'No image provided' }, { status: 400, headers })
     }
 
     let result = await analyzeWithAzure(base64Image)
@@ -89,11 +116,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (!result) {
-      return NextResponse.json({ error: 'Could not read receipt' }, { status: 422 })
+      return NextResponse.json({ error: 'Could not read receipt' }, { status: 422, headers })
     }
 
-    return NextResponse.json(result)
+    return NextResponse.json(result, { headers })
   } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers })
   }
 }

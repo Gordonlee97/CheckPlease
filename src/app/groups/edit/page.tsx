@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { v4 as uuidv4 } from 'uuid'
 import { getSavedGroup, saveGroup, deleteGroup, type GroupPerson } from '@/lib/savedGroups'
 import { getPersonColor } from '@/lib/personColors'
@@ -13,8 +13,9 @@ interface EditablePerson extends GroupPerson {
   key: string
 }
 
-export default function GroupEditorPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+function GroupEditorContent() {
+  const searchParams = useSearchParams()
+  const id = searchParams.get('id') ?? 'new'
   const isNew = id === 'new'
   const router = useRouter()
 
@@ -160,7 +161,7 @@ export default function GroupEditorPage({ params }: { params: Promise<{ id: stri
       </div>
     </main>
 
-    <div className="fixed bottom-0 left-0 right-0 pt-8 pb-6 bg-gradient-to-t from-bg to-transparent pointer-events-none">
+    <div className="fixed bottom-0 left-0 right-0 pt-8 pb-6-safe bg-gradient-to-t from-bg to-transparent pointer-events-none">
       <div className="max-w-md mx-auto px-6 pointer-events-auto">
         <Button fullWidth onClick={handleSave} disabled={!canSave}>
           Save group
@@ -168,5 +169,13 @@ export default function GroupEditorPage({ params }: { params: Promise<{ id: stri
       </div>
     </div>
     </>
+  )
+}
+
+export default function GroupEditorPage() {
+  return (
+    <Suspense fallback={null}>
+      <GroupEditorContent />
+    </Suspense>
   )
 }
