@@ -3,7 +3,7 @@
 import { useState, useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 import type { Session } from '@/lib/types'
 import type { PersonShare } from '@/lib/splitting'
-import { buildShareUrl, buildPlainText, buildVenmoRequestAllUrl } from '@/lib/share'
+import { buildShareUrl, buildPlainText } from '@/lib/share'
 import { getMyVenmoHandle } from '@/lib/userSettings'
 import { Button } from '@/components/ui/Button'
 
@@ -91,8 +91,6 @@ function ShareCard({ share, index, session }: ShareCardProps) {
 export function SummaryView({ session, shares, readOnly = false, onDone, ref, onReadyChange }: Props) {
   const [toast, setToast] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
-  const allVenmoUrl = buildVenmoRequestAllUrl(session, shares, getMyVenmoHandle() ?? undefined)
-
   const submitRef = useRef<() => void>(() => {})
   submitRef.current = () => onDone?.()
   useImperativeHandle(ref, () => ({ submit: () => submitRef.current() }), [])
@@ -147,17 +145,6 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
           <ShareCard key={share.personId} share={share} index={idx} session={session} />
         ))}
       </div>
-
-      {allVenmoUrl && (
-        <div className="flex justify-end mb-6 pr-1">
-          <button
-            onClick={() => window.open(allVenmoUrl, '_system')}
-            className="text-[11px] text-[#008CFF]/70 hover:text-[#008CFF] transition-colors"
-          >
-            Request all on Venmo
-          </button>
-        </div>
-      )}
 
       {readOnly && (
         <>

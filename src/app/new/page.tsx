@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Person, Item, ScanResult, Step } from '@/lib/types'
 import { saveSession } from '@/lib/storage'
 import { recordNames } from '@/lib/savedNames'
-import { buildShareUrl, buildPlainText, buildVenmoRequestAllUrl } from '@/lib/share'
+import { buildShareUrl, buildPlainText } from '@/lib/share'
 import { getSavedGroup } from '@/lib/savedGroups'
 import { getMyVenmoHandle } from '@/lib/userSettings'
 import Link from 'next/link'
@@ -216,8 +216,6 @@ export default function NewSplitPage() {
   const shares = step === 'summary'
     ? computeSplit(draft.people, draft.items, draft.tax, draft.tip, draft.total)
     : []
-  const allVenmoUrl = buildVenmoRequestAllUrl(session, shares, getMyVenmoHandle() ?? undefined)
-
   return (
     <>
       <main className="flex flex-col h-dvh max-w-md mx-auto">
