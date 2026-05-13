@@ -19,6 +19,11 @@
     color: var(--color-text-primary);
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* Prevent iOS Safari auto-zoom on input focus (triggered when font-size < 16px) */
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
 }
 
 /* ── Step transitions ── */

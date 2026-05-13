@@ -3,6 +3,7 @@
 import { useState, useImperativeHandle, useRef, useEffect, type Ref } from 'react'
 import type { Item, Person } from '@/lib/types'
 import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 
 export function Assign({ people, items: initialItems, onDone, ref, onReadyChange }: Props) {
   const [items, setItems] = useState<Item[]>(initialItems)
+  const itemCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   function toggleAssign(itemId: string, personId: string) {
     setItems(prev => prev.map(item => {
@@ -40,6 +42,12 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
 
   function clearAll() {
     setItems(prev => prev.map(item => ({ ...item, assignedTo: [] })))
+    const firstId = items[0]?.id
+    if (firstId) {
+      setTimeout(() => {
+        itemCardRefs.current[firstId]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 0)
+    }
   }
 
   const allIds = people.map(p => p.id)
@@ -90,7 +98,8 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
           const allAssigned = people.length > 0 && people.every(p => item.assignedTo.includes(p.id))
 
           return (
-            <Card key={item.id} className={cn(item.assignedTo.length === 0 && 'ring-1 ring-red-900/70')}>
+            <div key={item.id} ref={(el) => { itemCardRefs.current[item.id] = el }}>
+              <Card className={cn(item.assignedTo.length === 0 && 'ring-2 ring-red-500/70')}>
               <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-1.5">
                   <span className="text-text-primary font-medium">{item.name}</span>
@@ -98,14 +107,16 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
                     <span className="text-amber-400/60 text-xs" title={`Scan confidence: ${Math.round(item.confidence * 100)}%`}>⚠</span>
                   )}
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   <span className="text-gold font-semibold">${item.price.toFixed(2)}</span>
-                  {/* Always rendered so card height never shifts — invisible when only 1 assigned */}
+                  {/* Always rendered so card height never shifts — invisible when 0-1 assigned */}
                   <span className={cn(
                     'text-text-secondary text-xs block',
                     item.assignedTo.length > 1 ? '' : 'invisible'
                   )}>
-                    ${(item.price / Math.max(item.assignedTo.length, 1)).toFixed(2)} each
+                    {item.assignedTo.length > 1
+                      ? `$${(item.price / item.assignedTo.length).toFixed(2)} each`
+                      : ' '}
                   </span>
                 </div>
               </div>
@@ -143,13 +154,31 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
                 })}
               </div>
             </Card>
+            </div>
+
           )
         })}
       </div>
 
-      <p className={cn('text-sm text-center mb-6 transition-opacity', canContinue ? 'opacity-0' : 'text-red-400')}>
-        {unassigned.length} item{unassigned.length !== 1 ? 's' : ''} still need to be assigned
-      </p>
+      {!canContinue && (
+        <div className="flex flex-col items-center gap-2 mb-6">
+          <p className="text-sm text-red-400">
+            {unassigned.length} item{unassigned.length !== 1 ? 's' : ''} still need to be assigned
+          </p>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              const firstUnassigned = unassigned[0]
+              if (firstUnassigned) {
+                itemCardRefs.current[firstUnassigned.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }
+            }}
+          >
+            Go to next unassigned ↓
+          </Button>
+        </div>
+      )}
+      {canContinue && <div className="mb-6" />}
 
     </div>
   )
