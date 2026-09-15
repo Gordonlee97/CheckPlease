@@ -14,6 +14,10 @@ interface ItemInput {
   confidence?: number
 }
 
+function blankItem(): ItemInput {
+  return { id: uuidv4(), name: '', priceStr: '', assignedTo: [] }
+}
+
 interface Props {
   items: Item[]
   tax: number
@@ -26,13 +30,16 @@ interface Props {
 
 export function Review({ items: initialItems, tax: initTax, tip: initTip, label: initLabel, onDone, ref, onReadyChange }: Props) {
   const [items, setItems] = useState<ItemInput[]>(() =>
-    initialItems.map(i => ({
-      id: i.id,
-      name: i.name,
-      priceStr: i.price ? i.price.toFixed(2) : '',
-      assignedTo: i.assignedTo,
-      confidence: i.confidence,
-    }))
+    initialItems.length === 0
+      // Manual entry (or a scan that found nothing): give them a row to type into
+      ? [blankItem()]
+      : initialItems.map(i => ({
+          id: i.id,
+          name: i.name,
+          priceStr: i.price ? i.price.toFixed(2) : '',
+          assignedTo: i.assignedTo,
+          confidence: i.confidence,
+        }))
   )
   const [tax, setTax] = useState(initTax.toFixed(2))
   const [tip, setTip] = useState(initTip.toFixed(2))
@@ -67,7 +74,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
   }
 
   function addItem() {
-    setItems(prev => [...prev, { id: uuidv4(), name: '', priceStr: '', assignedTo: [] }])
+    setItems(prev => [...prev, blankItem()])
   }
 
   function focusNextReviewInput(currentEl: HTMLElement) {
