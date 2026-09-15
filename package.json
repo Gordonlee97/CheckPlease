@@ -30,6 +30,8 @@
     "@capacitor/android": "^7.6.2",
     "@capacitor/core": "^7.6.2",
     "@capacitor/ios": "^7.6.2",
+    "@upstash/ratelimit": "^2.1.0",
+    "@upstash/redis": "^1.38.4",
     "idb": "^8.0.3",
     "lz-string": "^1.5.0",
     "next": "16.2.4",
