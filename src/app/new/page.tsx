@@ -138,6 +138,12 @@ export default function NewSplitPage() {
     navigate('review')
   }
 
+  function handleManualEntry() {
+    // Items already in the draft (scanned, then came back) are kept for editing on Review
+    markCompleted('scan')
+    navigate('review')
+  }
+
   function handleReviewDone(items: Item[], tax: number, tip: number, total: number, label?: string) {
     const subtotal = items.reduce((sum, i) => sum + i.price, 0)
     setDraft(d => ({ ...d, items, tax, tip, total, subtotal, label: label ?? d.label }))
@@ -226,6 +232,7 @@ export default function NewSplitPage() {
                 initialFile={scannedFile ?? undefined}
                 onFileSelect={setScannedFile}
                 onDone={handleScanDone}
+                onManualEntry={handleManualEntry}
                 ref={stepRef}
                 onReadyChange={setCanProceed}
               />
