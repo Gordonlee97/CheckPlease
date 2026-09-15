@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { parseAzureResponse, ClaudeReceiptSchema, claudeReceiptToScanResult } from '@/lib/ocr'
+import { createScanLimiter, getClientIp, checkRateLimit } from '@/lib/rateLimit'
 import type { ScanResult } from '@/lib/types'
 
 export const maxDuration = 60
@@ -10,6 +11,7 @@ const AZURE_API_VERSION = '2024-11-30'
 const AZURE_MODEL = 'prebuilt-receipt'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const scanLimiter = createScanLimiter()
 
 const ALLOWED_ORIGINS = [
   'capacitor://localhost',
@@ -101,6 +103,15 @@ export async function POST(req: NextRequest) {
   const headers = corsHeaders(origin)
 
   try {
+    const rate = await checkRateLimit(scanLimiter, getClientIp(req.headers))
+    if (!rate.allowed) {
+      const minutes = Math.ceil(rate.retryAfterSeconds / 60)
+      return NextResponse.json(
+        { error: `Too many scans. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.` },
+        { status: 429, headers: { ...headers, 'Retry-After': String(rate.retryAfterSeconds) } }
+      )
+    }
+
     const formData = await req.formData()
     const base64Image = formData.get('image') as string | null
     if (!base64Image) {
