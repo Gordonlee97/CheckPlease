@@ -1,4 +1,4 @@
-import { parseAzureResponse, parseClaudeResponse } from '../src/lib/ocr'
+import { parseAzureResponse, ClaudeReceiptSchema, claudeReceiptToScanResult } from '../src/lib/ocr'
 
 const azureSuccess = {
   status: 'succeeded',
@@ -76,23 +76,40 @@ describe('parseAzureResponse', () => {
   })
 })
 
-describe('parseClaudeResponse', () => {
-  it('parses JSON returned by Claude', () => {
-    const claudeJson = JSON.stringify({
-      label: 'Taco House',
-      items: [{ name: 'Tacos', price: 12 }],
-      subtotal: 12,
-      tax: 1.2,
-      tip: 0,
-      total: 13.2,
+describe('ClaudeReceiptSchema', () => {
+  it('accepts a null label', () => {
+    const parsed = ClaudeReceiptSchema.safeParse({
+      label: null, items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 1.2, tip: 0, total: 13.2,
     })
-    const result = parseClaudeResponse(claudeJson)
-    expect(result).not.toBeNull()
-    expect(result!.label).toBe('Taco House')
-    expect(result!.items[0].price).toBe(12)
+    expect(parsed.success).toBe(true)
   })
 
-  it('returns null for unparseable Claude output', () => {
-    expect(parseClaudeResponse('Sorry, I cannot read this image.')).toBeNull()
+  it('rejects items without a numeric price', () => {
+    const parsed = ClaudeReceiptSchema.safeParse({
+      label: 'X', items: [{ name: 'Tacos', price: '12' }], subtotal: 12, tax: 0, tip: 0, total: 12,
+    })
+    expect(parsed.success).toBe(false)
+  })
+})
+
+describe('claudeReceiptToScanResult', () => {
+  it('maps a parsed receipt to a ScanResult', () => {
+    const result = claudeReceiptToScanResult({
+      label: 'Taco House', items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 1.2, tip: 0, total: 13.2,
+    })
+    expect(result).toEqual({
+      label: 'Taco House', items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 1.2, tip: 0, total: 13.2,
+    })
+  })
+
+  it('turns a null label into undefined', () => {
+    const result = claudeReceiptToScanResult({
+      label: null, items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 0, tip: 0, total: 12,
+    })
+    expect(result!.label).toBeUndefined()
+  })
+
+  it('returns null when there is no parsed output', () => {
+    expect(claudeReceiptToScanResult(null)).toBeNull()
   })
 })

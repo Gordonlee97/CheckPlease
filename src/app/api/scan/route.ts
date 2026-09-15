@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { parseAzureResponse, parseClaudeResponse } from '@/lib/ocr'
+import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
+import { parseAzureResponse, ClaudeReceiptSchema, claudeReceiptToScanResult } from '@/lib/ocr'
 import type { ScanResult } from '@/lib/types'
 
 export const maxDuration = 60
@@ -69,9 +70,14 @@ async function analyzeWithAzure(base64Image: string): Promise<ScanResult | null>
 }
 
 async function analyzeWithClaude(base64Image: string): Promise<ScanResult | null> {
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
+  const message = await anthropic.beta.messages.parse({
+    model: 'claude-opus-5',
+    max_tokens: 16000,
+    // Simple extraction; low effort keeps the scan fast while the user waits at the table.
+    output_config: { effort: 'low', format: betaZodOutputFormat(ClaudeReceiptSchema) },
+    // If a safety classifier declines, the API retries on Anthropic's recommended fallback model.
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',
     messages: [{
       role: 'user',
       content: [
@@ -81,22 +87,13 @@ async function analyzeWithClaude(base64Image: string): Promise<ScanResult | null
         },
         {
           type: 'text',
-          text: `Extract all line items from this receipt. Return ONLY a JSON object with this structure, no other text:
-{
-  "label": "restaurant name or null",
-  "items": [{"name": "item description", "price": 0.00}],
-  "subtotal": 0.00,
-  "tax": 0.00,
-  "tip": 0.00,
-  "total": 0.00
-}
-Each item's price should be the full line total (quantity × unit price already multiplied).`,
+          text: 'Extract every line item from this receipt, along with the restaurant name, subtotal, tax, tip, and total. Each item price is the full line total, with quantity already multiplied in.',
         },
       ],
     }],
   })
-  const text = message.content[0]?.type === 'text' ? message.content[0].text : ''
-  return parseClaudeResponse(text)
+  if (message.stop_reason === 'refusal') return null
+  return claudeReceiptToScanResult(message.parsed_output)
 }
 
 export async function POST(req: NextRequest) {
