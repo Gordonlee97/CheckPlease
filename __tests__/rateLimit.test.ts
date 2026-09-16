@@ -1,4 +1,35 @@
-import { getClientIp, checkRateLimit } from '../src/lib/rateLimit'
+import { getClientIp, checkRateLimit, createScanLimiter } from '../src/lib/rateLimit'
+
+describe('createScanLimiter', () => {
+  const saved = { ...process.env }
+  afterEach(() => { process.env = { ...saved } })
+
+  function clearRedisEnv() {
+    for (const key of ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'KV_REST_API_URL', 'KV_REST_API_TOKEN']) {
+      delete process.env[key]
+    }
+  }
+
+  it('returns null when no Redis credentials are set', () => {
+    clearRedisEnv()
+    expect(createScanLimiter()).toBeNull()
+  })
+
+  it('builds a limiter from UPSTASH_REDIS_REST_* credentials', () => {
+    clearRedisEnv()
+    process.env.UPSTASH_REDIS_REST_URL = 'https://example.upstash.io'
+    process.env.UPSTASH_REDIS_REST_TOKEN = 'token'
+    expect(createScanLimiter()).not.toBeNull()
+  })
+
+  // Vercel's Upstash integration injects these names instead
+  it('builds a limiter from KV_REST_API_* credentials', () => {
+    clearRedisEnv()
+    process.env.KV_REST_API_URL = 'https://example.upstash.io'
+    process.env.KV_REST_API_TOKEN = 'token'
+    expect(createScanLimiter()).not.toBeNull()
+  })
+})
 
 describe('getClientIp', () => {
   it('uses the first address in x-forwarded-for', () => {
