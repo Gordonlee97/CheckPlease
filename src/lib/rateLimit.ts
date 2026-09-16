@@ -14,10 +14,19 @@ export type RateLimitResult =
   | { allowed: true }
   | { allowed: false; retryAfterSeconds: number }
 
+// Redis.fromEnv() accepts either name pair: UPSTASH_REDIS_REST_* (Upstash console)
+// or KV_REST_API_* (injected by Vercel's Upstash integration).
+function hasRedisCredentials(): boolean {
+  return Boolean(
+    (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ||
+    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+  )
+}
+
 // Returns null when Upstash isn't configured (e.g. local dev) so scanning still works.
 export function createScanLimiter(): Limiter | null {
-  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-    console.warn('[rateLimit] UPSTASH_REDIS_REST_URL/TOKEN not set — /api/scan is not rate limited')
+  if (!hasRedisCredentials()) {
+    console.warn('[rateLimit] No Upstash credentials (UPSTASH_REDIS_REST_URL/TOKEN or KV_REST_API_URL/TOKEN) — /api/scan is not rate limited')
     return null
   }
   return new Ratelimit({
