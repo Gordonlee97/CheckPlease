@@ -52,7 +52,7 @@ A new split has five steps. A progress bar at the top lets you go back to earlie
 | Step | What you do |
 |---|---|
 | **1. Who's splitting?** | Add everyone at the table (at least 2 people). Names you've used before appear as suggestions. You can also load a saved group, add optional Venmo handles, or save this table as a new group. |
-| **2. Scan receipt** | Take a photo of the receipt, or choose one from your gallery. The app reads it in a few seconds. |
+| **2. Scan receipt** | Take a photo of the receipt, or choose one from your gallery. The app reads it in a few seconds. No receipt, or the scan can't read it? Tap **Enter items manually** and type the items yourself. |
 | **3. Review items** | Check the items, prices, restaurant name, tax, and tip. Items marked ⚠ were hard to read, so double-check those. Fix anything that's wrong, remove extra lines, or add missing items. The total updates as you edit. |
 | **4. Assign items** | Tap a person's name under each item to assign it to them. Tap several names for a shared item, or **All** for something everyone shared. **Split equally between everyone** assigns every item to the whole table. You can't continue until every item is assigned. Unassigned items are outlined in red. |
 | **5. Totals** | See each person's total and what's in it. Tap **Share link** or **Copy text** to send results, or **Request on Venmo** next to a person. Tap **Done** to save the split to your history. |
@@ -86,7 +86,7 @@ This is how most people would split a bill by hand, just faster and without the 
 That happens, especially with crumpled receipts, bad lighting, or handwritten tips. The Review step exists for this: fix any item before you assign it. If the scan fails completely, retake the photo in better light.
 
 **Can I use it without a receipt?**
-Not yet. The flow starts with a scan, and there's no "enter items manually" option.
+Yes. On the Scan step, tap **Enter items manually** and type each item and price. The rest of the split works the same.
 
 **Does it work on iPhone and Android?**
 Yes. It runs in your phone's browser. You can also use **Add to Home Screen** so it opens like an app.
@@ -111,7 +111,8 @@ The button opens the Venmo app, so it only works on a phone with Venmo installed
 | Framework | [Next.js](https://nextjs.org) 16 (App Router), React 19, TypeScript |
 | Styling | Tailwind CSS v4 |
 | Receipt OCR (primary) | Azure AI Document Intelligence, `prebuilt-receipt` model |
-| Receipt OCR (fallback) | Anthropic Claude (vision) via `@anthropic-ai/sdk` |
+| Receipt OCR (fallback) | Claude Opus 5 vision + structured outputs via `@anthropic-ai/sdk` |
+| Rate limiting | [`@upstash/ratelimit`](https://github.com/upstash/ratelimit-js) + Upstash Redis on `/api/scan` |
 | Local persistence | IndexedDB via [`idb`](https://github.com/jakearchibald/idb) for splits, `localStorage` for groups, names, and settings |
 | Share links | [`lz-string`](https://github.com/pieroxy/lz-string) compression in the URL hash |
 | Native wrapper | Capacitor 7 (iOS / Android), experimental |
@@ -147,10 +148,14 @@ Put these in `.env.local`. All `.env*` files are gitignored.
 | `AZURE_DI_ENDPOINT` | Server | Recommended | Your Azure Document Intelligence endpoint, e.g. `https://<resource>.cognitiveservices.azure.com` |
 | `AZURE_DI_KEY` | Server | Recommended | Azure Document Intelligence API key |
 | `ANTHROPIC_API_KEY` | Server | Yes | Anthropic API key for the Claude fallback |
+| `UPSTASH_REDIS_REST_URL` | Server | Production | Upstash Redis REST URL, for rate limiting `/api/scan` |
+| `UPSTASH_REDIS_REST_TOKEN` | Server | Production | Upstash Redis REST token |
 | `NEXT_PUBLIC_SCAN_API_URL` | Client | No | Full URL of the scan endpoint. Defaults to `/api/scan`. Set it for native builds, which have no local API. |
 | `NEXT_PUBLIC_SHARE_BASE_URL` | Client | No | Base URL used in share links. Defaults to `window.location.origin`. |
 
 If the Azure variables aren't set, every scan goes straight to Claude. The app still works, but it's slower and item confidence warnings (⚠) won't appear.
+
+If the Upstash variables aren't set, scanning still works but **nothing is rate limited**, and a warning is logged at startup. `KV_REST_API_URL` / `KV_REST_API_TOKEN` also work: those are the names Vercel's Upstash marketplace integration injects.
 
 ```bash
 # .env.local
@@ -220,9 +225,10 @@ flowchart LR
 ### Receipt scanning (`/api/scan`)
 
 1. The client resizes the photo to a maximum of 1024 px on the long edge (JPEG quality 0.85), which keeps the upload under Vercel's 4.5 MB request limit. It then POSTs the base64 string as the `image` form field.
-2. The route submits the image to Azure's `prebuilt-receipt` model and polls the operation with exponential backoff (up to about 20 polls).
-3. If Azure isn't configured, fails, or returns fewer than 2 items, the route sends the image to Claude with a prompt asking for the same JSON shape.
-4. The response is a `ScanResult`: `{ label, items[{ name, price, confidence? }], subtotal, tax, tip, total }`. The route returns `422` if neither service can read the receipt.
+2. The route checks the per-IP rate limit (`src/lib/rateLimit.ts`, 10 scans/hour, sliding window) before reading the body, and returns `429` with `Retry-After` when it's exceeded.
+3. It submits the image to Azure's `prebuilt-receipt` model and polls the operation with exponential backoff (up to about 20 polls).
+4. If Azure isn't configured, fails, or returns fewer than 2 items, the route sends the image to Claude Opus 5. A Zod schema passed as `output_config.format` constrains the reply, so no JSON is parsed out of free text. Server-side refusal fallbacks are enabled; a refusal that survives them is treated as an unreadable receipt.
+5. The response is a `ScanResult`: `{ label, items[{ name, price, confidence? }], subtotal, tax, tip, total }`. The route returns `422` if neither service can read the receipt.
 
 API keys stay on the server. CORS is limited to an allowlist in `route.ts` (localhost, `capacitor://localhost`, and the production domain).
 
@@ -271,7 +277,10 @@ The app is built for [Vercel](https://vercel.com):
 
 1. Import the repository in Vercel.
 2. Add `AZURE_DI_ENDPOINT`, `AZURE_DI_KEY`, and `ANTHROPIC_API_KEY` under **Project → Settings → Environment Variables**.
-3. Deploy. The scan route sets `maxDuration = 60` so Azure polling plus the Claude fallback has time to finish.
+3. Add Upstash Redis for rate limiting, either way round:
+   - **Storage → Create Database → Upstash for Redis**, then connect it to the project. Vercel injects `KV_REST_API_URL` / `KV_REST_API_TOKEN`.
+   - Or create one at [console.upstash.com](https://console.upstash.com) and add `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` yourself.
+4. Deploy. The scan route sets `maxDuration = 60` so Azure polling plus the Claude fallback has time to finish. Environment variables only reach new deployments, so redeploy after changing them.
 
 If you deploy to a domain other than `checkplease.vercel.app`, add it to `ALLOWED_ORIGINS` in `src/app/api/scan/route.ts`, and update the URLs hardcoded in the `build:ios` / `build:android` scripts.
 
@@ -290,9 +299,8 @@ npm run build:android && npm run open:android
 
 ## Known limitations
 
-- **No manual entry without a scan.** The wizard requires a successful scan before Review.
 - **Drafts aren't saved.** Refreshing or leaving during a split loses progress.
 - **Splits can't be deleted** from history.
 - **USD formatting only.**
 - **Receipt discounts and service charges** aren't treated specially. They come through as whatever the OCR returns, so check them on the Review step.
-- **The scan endpoint is unauthenticated.** It's protected only by a CORS allowlist, which browsers enforce but other clients like `curl` ignore. Anyone who finds the URL can send it images, and each request uses your Azure and Anthropic credits.
+- **The scan endpoint has no authentication**, only a per-IP rate limit and a CORS allowlist. Browsers honour CORS; `curl` doesn't. Anyone who finds the URL can send it up to 10 images an hour per IP, spending your Azure and Anthropic credits. Spending caps in those consoles are the backstop.
