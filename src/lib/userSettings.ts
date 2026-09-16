@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { registerInvalidator, notifyStoreChanged, subscribeToStore } from './localStorageStore'
+import { readCached, notifyStoreChanged, subscribeToStore } from './localStorageStore'
 
 const KEY = 'checkplease:user-settings'
 
@@ -9,24 +9,16 @@ interface UserSettings {
 
 const EMPTY: UserSettings = {}
 
-// Cached so the snapshot is referentially stable between writes.
-let cache: UserSettings | null = null
-registerInvalidator(() => { cache = null })
+// Referentially stable between changes, as useSyncExternalStore requires.
+const cache = { raw: null as string | null, value: EMPTY }
 
 function getSettings(): UserSettings {
-  if (typeof window === 'undefined') return EMPTY
-  if (cache === null) {
-    try {
-      cache = JSON.parse(localStorage.getItem(KEY) ?? '{}')
-    } catch { cache = EMPTY }
-  }
-  return cache ?? EMPTY
+  return readCached(KEY, cache, EMPTY)
 }
 
 function saveSettings(settings: UserSettings): void {
   if (typeof window === 'undefined') return
   localStorage.setItem(KEY, JSON.stringify(settings))
-  cache = null
   notifyStoreChanged()
 }
 

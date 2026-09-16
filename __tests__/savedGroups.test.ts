@@ -23,6 +23,24 @@ describe('savedGroups', () => {
     expect(getSavedGroup(group.id)?.name).toBe('Old roommates')
   })
 
+  // The cached snapshot must not go stale when localStorage changes underneath
+  // it (another tab, devtools, or a test clearing storage).
+  it('picks up writes that bypass this module', () => {
+    saveGroup({ name: 'Roommates', people })
+    localStorage.clear()
+    expect(getSavedGroups()).toEqual([])
+
+    localStorage.setItem('checkplease:saved-groups', JSON.stringify([
+      { id: 'x', name: 'From another tab', people, updatedAt: '2026-09-15T00:00:00.000Z' },
+    ]))
+    expect(getSavedGroups().map(g => g.name)).toEqual(['From another tab'])
+  })
+
+  it('returns a stable reference while nothing changes', () => {
+    saveGroup({ name: 'Roommates', people })
+    expect(getSavedGroups()).toBe(getSavedGroups())
+  })
+
   it('deletes a group', () => {
     const group = saveGroup({ name: 'Roommates', people })
     deleteGroup(group.id)

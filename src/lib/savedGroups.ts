@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { registerInvalidator, notifyStoreChanged, subscribeToStore } from './localStorageStore'
+import { readCached, notifyStoreChanged, subscribeToStore } from './localStorageStore'
 
 const KEY = 'checkplease:saved-groups'
 
@@ -19,24 +19,15 @@ export interface SavedGroup {
 
 const EMPTY: SavedGroup[] = []
 
-// Cached so getSavedGroups() is referentially stable between writes,
-// which useSyncExternalStore requires.
-let cache: SavedGroup[] | null = null
-registerInvalidator(() => { cache = null })
+// Referentially stable between changes, as useSyncExternalStore requires.
+const cache = { raw: null as string | null, value: EMPTY }
 
 export function getSavedGroups(): SavedGroup[] {
-  if (typeof window === 'undefined') return EMPTY
-  if (cache === null) {
-    try {
-      cache = JSON.parse(localStorage.getItem(KEY) ?? '[]')
-    } catch { cache = EMPTY }
-  }
-  return cache ?? EMPTY
+  return readCached(KEY, cache, EMPTY)
 }
 
 function write(groups: SavedGroup[]): void {
   localStorage.setItem(KEY, JSON.stringify(groups))
-  cache = null
   notifyStoreChanged()
 }
 

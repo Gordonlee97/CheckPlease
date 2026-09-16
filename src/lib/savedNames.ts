@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { registerInvalidator, notifyStoreChanged, subscribeToStore } from './localStorageStore'
+import { readCached, notifyStoreChanged, subscribeToStore } from './localStorageStore'
 
 const KEY = 'checkplease:saved-names'
 
@@ -10,24 +10,15 @@ export interface SavedName {
 
 const EMPTY: SavedName[] = []
 
-// Cached so getSavedNames() is referentially stable between writes,
-// which useSyncExternalStore requires.
-let cache: SavedName[] | null = null
-registerInvalidator(() => { cache = null })
+// Referentially stable between changes, as useSyncExternalStore requires.
+const cache = { raw: null as string | null, value: EMPTY }
 
 export function getSavedNames(): SavedName[] {
-  if (typeof window === 'undefined') return EMPTY
-  if (cache === null) {
-    try {
-      cache = JSON.parse(localStorage.getItem(KEY) ?? '[]')
-    } catch { cache = EMPTY }
-  }
-  return cache ?? EMPTY
+  return readCached(KEY, cache, EMPTY)
 }
 
 function write(names: SavedName[]): void {
   localStorage.setItem(KEY, JSON.stringify(names))
-  cache = null
   notifyStoreChanged()
 }
 
