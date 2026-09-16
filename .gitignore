@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local AI tooling artifacts
+.claude/settings.local.json
+.playwright-mcp/
+.superpowers/
+test-output.txt
