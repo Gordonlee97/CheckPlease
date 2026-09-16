@@ -3,11 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "jest": {
-    "preset": "ts-jest",
+    "preset": "ts-jest/presets/js-with-ts",
     "testEnvironment": "node",
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
     },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!uuid/)"
+    ],
     "globals": {
       "ts-jest": {
         "tsconfig": "tsconfig.test.json"

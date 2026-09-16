@@ -6,12 +6,6 @@ import { createRoot, type Root } from 'react-dom/client'
 import { Scan } from '../src/components/steps/Scan'
 import { Review } from '../src/components/steps/Review'
 
-// uuid v14 is ESM-only, which Jest's CommonJS runtime can't load
-jest.mock('uuid', () => {
-  let n = 0
-  return { v4: () => `id-${++n}` }
-})
-
 jest.mock('../src/lib/imageUtils', () => ({
   resizeImage: jest.fn().mockResolvedValue('data:image/jpeg;base64,AAAA'),
   dataUrlToBase64: jest.fn().mockReturnValue('AAAA'),
