@@ -6,9 +6,8 @@ import { v4 as uuidv4 } from 'uuid'
 import type { Person, Item, ScanResult, Step } from '@/lib/types'
 import { saveSession } from '@/lib/storage'
 import { recordNames } from '@/lib/savedNames'
-import { buildShareUrl, buildPlainText } from '@/lib/share'
 import { getSavedGroup } from '@/lib/savedGroups'
-import { getMyVenmoHandle } from '@/lib/userSettings'
+import { useShareActions } from '@/hooks/useShareActions'
 import Link from 'next/link'
 import { AddPeople } from '@/components/steps/AddPeople'
 import { Scan } from '@/components/steps/Scan'
@@ -72,15 +71,8 @@ export default function NewSplitPage() {
     setCanProceed(people.length >= 2)
     setAddPeopleKey(k => k + 1) // remount AddPeople with new initialPeople
   }, [])
-  const [toast, setToast] = useState<string | null>(null)
-  const [sharing, setSharing] = useState(false)
   const stepRef = useRef<StepHandle>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
-
-  function showToast(msg: string) {
-    setToast(msg)
-    setTimeout(() => setToast(null), 2500)
-  }
 
   function navigate(toStep: Step) {
     const currentIdx = STEP_ORDER.indexOf(step)
@@ -146,6 +138,12 @@ export default function NewSplitPage() {
     navigate('review')
   }
 
+  function handleManualEntry() {
+    // Items already in the draft (scanned, then came back) are kept for editing on Review
+    markCompleted('scan')
+    navigate('review')
+  }
+
   function handleReviewDone(items: Item[], tax: number, tip: number, total: number, label?: string) {
     const subtotal = items.reduce((sum, i) => sum + i.price, 0)
     setDraft(d => ({ ...d, items, tax, tip, total, subtotal, label: label ?? d.label }))
@@ -175,33 +173,6 @@ export default function NewSplitPage() {
     router.push('/')
   }
 
-  async function handleShareLink() {
-    if (sharing) return
-    setSharing(true)
-    try {
-      const url = buildShareUrl(session)
-      if (navigator.share) {
-        try { await navigator.share({ title: 'CheckPlease split', url }); return } catch {}
-      }
-      try { await navigator.clipboard.writeText(url); showToast('Link copied!') }
-      catch { showToast('Could not copy link') }
-    } finally {
-      setSharing(false)
-    }
-  }
-
-  async function handleCopyText() {
-    if (sharing) return
-    setSharing(true)
-    try {
-      const text = buildPlainText(session, shares, getMyVenmoHandle())
-      try { await navigator.clipboard.writeText(text); showToast('Copied to clipboard!') }
-      catch { showToast('Could not copy text') }
-    } finally {
-      setSharing(false)
-    }
-  }
-
   const session = {
     id: sessionId,
     createdAt,
@@ -216,6 +187,8 @@ export default function NewSplitPage() {
   const shares = step === 'summary'
     ? computeSplit(draft.people, draft.items, draft.tax, draft.tip, draft.total)
     : []
+  const { toast, sharing, shareLink, copyText } = useShareActions(session, shares)
+
   return (
     <>
       <main className="flex flex-col h-dvh max-w-md mx-auto">
@@ -259,6 +232,7 @@ export default function NewSplitPage() {
                 initialFile={scannedFile ?? undefined}
                 onFileSelect={setScannedFile}
                 onDone={handleScanDone}
+                onManualEntry={handleManualEntry}
                 ref={stepRef}
                 onReadyChange={setCanProceed}
               />
@@ -302,8 +276,8 @@ export default function NewSplitPage() {
           {step === 'summary' ? (
             <div className="flex flex-col gap-3">
               <div className="flex gap-3">
-                <Button fullWidth onClick={handleShareLink} disabled={sharing}>Share link</Button>
-                <Button fullWidth variant="ghost" onClick={handleCopyText} disabled={sharing}>Copy text</Button>
+                <Button fullWidth onClick={shareLink} disabled={sharing}>Share link</Button>
+                <Button fullWidth variant="ghost" onClick={copyText} disabled={sharing}>Copy text</Button>
               </div>
               <Button fullWidth variant="green" onClick={handleSummaryDone}>Done</Button>
             </div>

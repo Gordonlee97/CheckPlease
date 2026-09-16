@@ -3,16 +3,18 @@
 import { useRef, useState, useEffect, useImperativeHandle, type Ref } from 'react'
 import type { ScanResult } from '@/lib/types'
 import { resizeImage, dataUrlToBase64 } from '@/lib/imageUtils'
+import { Button } from '@/components/ui/Button'
 
 interface Props {
   initialFile?: File
   onFileSelect?: (file: File) => void
   onDone: (result: ScanResult) => void
+  onManualEntry?: () => void
   ref?: Ref<{ submit: () => void }>
   onReadyChange?: (ready: boolean) => void
 }
 
-export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: Props) {
+export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, onReadyChange }: Props) {
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
   const onDoneRef = useRef(onDone)
@@ -81,6 +83,16 @@ export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: 
     }
   }
 
+  // Not offered while scanning, so a late scan result can't overwrite typed items
+  const manualEntryLink = onManualEntry && (
+    <button
+      onClick={onManualEntry}
+      className="w-full text-center text-text-secondary/60 text-sm py-2 hover:text-text-secondary transition-colors"
+    >
+      Enter items manually
+    </button>
+  )
+
   return (
     <div>
       <h2 className="font-display text-4xl tracking-wide text-gold mb-1">Scan Receipt</h2>
@@ -108,6 +120,7 @@ export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: 
           >
             🖼 Choose from gallery
           </button>
+          {manualEntryLink}
         </div>
       )}
 
@@ -138,6 +151,7 @@ export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: 
               🖼 Gallery
             </button>
           </div>
+          {manualEntryLink}
         </div>
       )}
 
@@ -197,6 +211,9 @@ export function Scan({ initialFile, onFileSelect, onDone, ref, onReadyChange }: 
               🖼 Gallery
             </button>
           </div>
+          {onManualEntry && (
+            <Button fullWidth variant="ghost" onClick={onManualEntry}>Enter items manually</Button>
+          )}
         </div>
       )}
     </div>
