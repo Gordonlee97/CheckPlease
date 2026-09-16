@@ -26,6 +26,9 @@ function GroupEditorContent() {
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect --
+       Seeds the editable form once from localStorage, which is empty during
+       prerender; later edits are local state, not a live subscription. */
     if (!isNew) {
       const group = getSavedGroup(id)
       if (group) {
@@ -33,6 +36,7 @@ function GroupEditorContent() {
         setPeople(group.people.map(p => ({ ...p, key: uuidv4() })))
       }
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [id, isNew])
 
   function addPerson() {
@@ -67,7 +71,7 @@ function GroupEditorContent() {
     saveGroup({
       id: isNew ? undefined : id,
       name: trimmedName,
-      people: people.map(({ key: _key, ...rest }) => rest),
+      people: people.map(({ key, ...rest }) => { void key; return rest }),
     })
     exit()
   }

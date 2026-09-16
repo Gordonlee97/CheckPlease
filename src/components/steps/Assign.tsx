@@ -59,9 +59,8 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
   const unassigned = items.filter(i => i.assignedTo.length === 0)
   const canContinue = unassigned.length === 0
 
-  const submitRef = useRef<() => void>(() => {})
-  submitRef.current = () => onDone(items)
-  useImperativeHandle(ref, () => ({ submit: () => submitRef.current() }), [])
+  // No deps: rebuilt each render so submit() always sees the current items
+  useImperativeHandle(ref, () => ({ submit: () => onDone(items) }))
 
   useEffect(() => {
     onReadyChange?.(canContinue)

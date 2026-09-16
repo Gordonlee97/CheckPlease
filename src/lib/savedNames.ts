@@ -1,3 +1,6 @@
+import { useSyncExternalStore } from 'react'
+import { registerInvalidator, notifyStoreChanged, subscribeToStore } from './localStorageStore'
+
 const KEY = 'checkplease:saved-names'
 
 export interface SavedName {
@@ -5,25 +8,44 @@ export interface SavedName {
   usedAt: string // ISO
 }
 
+const EMPTY: SavedName[] = []
+
+// Cached so getSavedNames() is referentially stable between writes,
+// which useSyncExternalStore requires.
+let cache: SavedName[] | null = null
+registerInvalidator(() => { cache = null })
+
 export function getSavedNames(): SavedName[] {
-  if (typeof window === 'undefined') return []
-  try {
-    return JSON.parse(localStorage.getItem(KEY) ?? '[]')
-  } catch { return [] }
+  if (typeof window === 'undefined') return EMPTY
+  if (cache === null) {
+    try {
+      cache = JSON.parse(localStorage.getItem(KEY) ?? '[]')
+    } catch { cache = EMPTY }
+  }
+  return cache ?? EMPTY
+}
+
+function write(names: SavedName[]): void {
+  localStorage.setItem(KEY, JSON.stringify(names))
+  cache = null
+  notifyStoreChanged()
 }
 
 export function recordNames(names: string[]): void {
   if (typeof window === 'undefined') return
-  let saved = getSavedNames()
+  let saved = getSavedNames().slice()
   for (const name of names) {
     saved = saved.filter(n => n.name.toLowerCase() !== name.toLowerCase())
     saved.unshift({ name, usedAt: new Date().toISOString() })
   }
-  localStorage.setItem(KEY, JSON.stringify(saved.slice(0, 50)))
+  write(saved.slice(0, 50))
 }
 
 export function forgetName(name: string): void {
   if (typeof window === 'undefined') return
-  const saved = getSavedNames().filter(n => n.name.toLowerCase() !== name.toLowerCase())
-  localStorage.setItem(KEY, JSON.stringify(saved))
+  write(getSavedNames().filter(n => n.name.toLowerCase() !== name.toLowerCase()))
+}
+
+export function useSavedNames(): SavedName[] {
+  return useSyncExternalStore(subscribeToStore, getSavedNames, () => EMPTY)
 }

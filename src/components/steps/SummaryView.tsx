@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useImperativeHandle, useRef, type Ref } from 'react'
+import { useState, useEffect, useImperativeHandle, type Ref } from 'react'
 import type { Session } from '@/lib/types'
 import type { PersonShare } from '@/lib/splitting'
 import { useShareActions } from '@/hooks/useShareActions'
@@ -18,6 +18,7 @@ interface Props {
 function useCountUp(target: number, delay = 0, duration = 850) {
   const [val, setVal] = useState(0)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- part of the rAF count-up animation, not derived state
     if (target === 0) { setVal(0); return }
     let raf: number
     const startTime = performance.now() + delay
@@ -89,9 +90,8 @@ function ShareCard({ share, index, session }: ShareCardProps) {
 
 export function SummaryView({ session, shares, readOnly = false, onDone, ref, onReadyChange }: Props) {
   const { toast, sharing, shareLink, copyText } = useShareActions(session, shares)
-  const submitRef = useRef<() => void>(() => {})
-  submitRef.current = () => onDone?.()
-  useImperativeHandle(ref, () => ({ submit: () => submitRef.current() }), [])
+  // No deps: rebuilt each render so submit() always sees the current onDone
+  useImperativeHandle(ref, () => ({ submit: () => onDone?.() }))
 
   useEffect(() => {
     onReadyChange?.(true)

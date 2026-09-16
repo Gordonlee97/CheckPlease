@@ -1,13 +1,33 @@
 import { z } from 'zod'
 import type { ScanResult } from './types'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function parseAzureResponse(azureResult: any): ScanResult | null {
+// Only the Azure prebuilt-receipt fields this app reads.
+interface AzureCurrencyField { valueCurrency?: { amount?: number }; confidence?: number }
+interface AzureItemEntry {
+  valueObject?: {
+    Description?: { valueString?: string }
+    TotalPrice?: AzureCurrencyField
+  }
+}
+interface AzureReceiptFields {
+  MerchantName?: { valueString?: string }
+  Items?: { valueArray?: AzureItemEntry[] }
+  SubTotal?: AzureCurrencyField
+  TotalTax?: AzureCurrencyField
+  Tip?: AzureCurrencyField
+  Total?: AzureCurrencyField
+}
+export interface AzureAnalyzeResponse {
+  status?: string // 'succeeded' | 'failed' | 'running', polled by /api/scan
+  analyzeResult?: { documents?: Array<{ fields?: AzureReceiptFields }> }
+}
+
+export function parseAzureResponse(azureResult: AzureAnalyzeResponse): ScanResult | null {
   const doc = azureResult?.analyzeResult?.documents?.[0]
   if (!doc) return null
 
-  const fields = doc.fields ?? {}
-  const itemsArray = (fields.Items?.valueArray ?? []).map((entry: any) => ({
+  const fields: AzureReceiptFields = doc.fields ?? {}
+  const itemsArray = (fields.Items?.valueArray ?? []).map(entry => ({
     name: entry.valueObject?.Description?.valueString ?? 'Unknown item',
     price: entry.valueObject?.TotalPrice?.valueCurrency?.amount ?? 0,
     confidence: entry.valueObject?.TotalPrice?.confidence as number | undefined,

@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect, useImperativeHandle, useRef, type Ref, KeyboardEvent, MouseEvent } from 'react'
+import { useState, useEffect, useImperativeHandle, type Ref, KeyboardEvent, MouseEvent } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Person } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
-import { getSavedNames, forgetName, type SavedName } from '@/lib/savedNames'
+import { useSavedNames, forgetName } from '@/lib/savedNames'
 import { getPersonColor } from '@/lib/personColors'
-import { saveGroup, getSavedGroups, type SavedGroup } from '@/lib/savedGroups'
+import { saveGroup, useSavedGroups, type SavedGroup } from '@/lib/savedGroups'
 
 interface Props {
   initialPeople?: Person[]
@@ -20,22 +20,16 @@ interface Props {
 export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) {
   const [people, setPeople] = useState<Person[]>(initialPeople ?? [])
   const [name, setName] = useState('')
-  const [savedNames, setSavedNames] = useState<SavedName[]>([])
+  const savedNames = useSavedNames()
   const [savingGroup, setSavingGroup] = useState(false)
   const [groupName, setGroupName] = useState('')
   // Names snapshot taken at save time — show "Group saved!" while people still match it
   const [savedSnapshot, setSavedSnapshot] = useState<string[] | null>(null)
-  const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
+  const savedGroups = useSavedGroups()
   const [showGroupPicker, setShowGroupPicker] = useState(false)
 
-  useEffect(() => {
-    setSavedNames(getSavedNames())
-    setSavedGroups(getSavedGroups())
-  }, [])
-
-  const submitRef = useRef<() => void>(() => {})
-  submitRef.current = () => onDone(people)
-  useImperativeHandle(ref, () => ({ submit: () => submitRef.current() }), [])
+  // No deps: rebuilt each render so submit() always sees the current people
+  useImperativeHandle(ref, () => ({ submit: () => onDone(people) }))
 
   useEffect(() => {
     onReadyChange?.(people.length >= 2)
@@ -91,8 +85,7 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
 
   function handleForget(savedName: string, e: MouseEvent) {
     e.stopPropagation()
-    forgetName(savedName)
-    setSavedNames(prev => prev.filter(n => n.name !== savedName))
+    forgetName(savedName) // store notifies subscribers, so the list updates itself
   }
 
   function confirmSaveGroup() {
@@ -109,7 +102,7 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
 
   return (
     <div>
-      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">Who's splitting?</h2>
+      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">Who&apos;s splitting?</h2>
       <p className="text-text-secondary text-sm mb-6">Add everyone at the table.</p>
 
       <div className="flex gap-2 mb-2">

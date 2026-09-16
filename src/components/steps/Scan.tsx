@@ -18,7 +18,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
   const onDoneRef = useRef(onDone)
-  onDoneRef.current = onDone
+  useEffect(() => { onDoneRef.current = onDone })
 
   const [selectedFile, setSelectedFile] = useState<File | null>(initialFile ?? null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -36,19 +36,19 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
     }
   }, [pendingResult, animDone])
 
-  const submitFnRef = useRef<() => void>(() => {})
-  submitFnRef.current = () => { if (selectedFile && (status === 'idle' || status === 'error')) handleScan(selectedFile) }
-  useImperativeHandle(ref, () => ({ submit: () => submitFnRef.current() }), [])
-
   useEffect(() => {
     onReadyChange?.(!!selectedFile && status !== 'scanning')
   }, [selectedFile, status, onReadyChange])
 
-  // Create/revoke object URL whenever selectedFile changes
+  // Create/revoke object URL whenever selectedFile changes.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect --
+       URL.createObjectURL allocates a browser resource that must be revoked on
+       cleanup, so the URL belongs in an effect rather than in render. */
     if (!selectedFile) { setPreviewUrl(null); return }
     const url = URL.createObjectURL(selectedFile)
     setPreviewUrl(url)
+    /* eslint-enable react-hooks/set-state-in-effect */
     return () => URL.revokeObjectURL(url)
   }, [selectedFile])
 
@@ -82,6 +82,11 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
     }
   }
+
+  // Declared after handleScan; no deps, so submit() always sees the current file and status
+  useImperativeHandle(ref, () => ({
+    submit: () => { if (selectedFile && (status === 'idle' || status === 'error')) handleScan(selectedFile) },
+  }))
 
   // Not offered while scanning, so a late scan result can't overwrite typed items
   const manualEntryLink = onManualEntry && (
@@ -129,6 +134,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
         <div className="flex flex-col gap-3">
           {previewUrl && (
             <div className="rounded-2xl overflow-hidden border border-border">
+              {/* eslint-disable-next-line @next/next/no-img-element -- local blob: URL; next/image can't optimize it */}
               <img
                 src={previewUrl}
                 alt="Receipt preview"
@@ -160,6 +166,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
         <div className="flex flex-col gap-3">
           {previewUrl && (
             <div className="rounded-2xl overflow-hidden border border-gold/20 relative" style={{ minHeight: 120 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- local blob: URL; next/image can't optimize it */}
               <img
                 src={previewUrl}
                 alt="Receipt preview"
@@ -190,6 +197,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
         <div className="flex flex-col gap-4">
           {previewUrl && (
             <div className="rounded-2xl overflow-hidden border border-red-900 opacity-60">
+              {/* eslint-disable-next-line @next/next/no-img-element -- local blob: URL; next/image can't optimize it */}
               <img src={previewUrl} alt="Receipt preview" className="w-full object-contain max-h-48" />
             </div>
           )}
