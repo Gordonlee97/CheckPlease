@@ -11,11 +11,15 @@ export default function SharePage() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect --
+       window.location.hash doesn't exist during prerender, so decoding it in
+       render would desync hydration. One-time read, not derived state. */
     const hash = window.location.hash.slice(1)
     if (!hash) { setError(true); return }
     const decoded = decodeSession(hash)
     if (!decoded) { setError(true); return }
     setSession(decoded)
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [])
 
   if (error) {

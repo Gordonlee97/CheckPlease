@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useImperativeHandle, useRef, useEffect, type Ref } from 'react'
+import { useState, useImperativeHandle, useEffect, type Ref } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Item } from '@/lib/types'
 import { Input } from '@/components/ui/Input'
@@ -96,9 +96,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
   const hasValidItems = items.some(i => i.name.trim() && parseFloat(i.priceStr) > 0)
 
-  const submitRef = useRef<() => void>(() => {})
-  submitRef.current = handleDone
-  useImperativeHandle(ref, () => ({ submit: () => submitRef.current() }), [])
+  // No deps: rebuilt each render so submit() always sees the current items
+  useImperativeHandle(ref, () => ({ submit: handleDone }))
 
   useEffect(() => {
     onReadyChange?.(hasValidItems)

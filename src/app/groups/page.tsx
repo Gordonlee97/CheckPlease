@@ -1,19 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSavedGroups, type SavedGroup } from '@/lib/savedGroups'
+import { useSavedGroups } from '@/lib/savedGroups'
 import { Card } from '@/components/ui/Card'
 import Link from 'next/link'
 
 export default function GroupsPage() {
   const router = useRouter()
-  const [groups, setGroups] = useState<SavedGroup[]>([])
+  const groups = useSavedGroups()
   const [exiting, setExiting] = useState(false)
-
-  useEffect(() => {
-    setGroups(getSavedGroups())
-  }, [])
 
   function handleBack() {
     setExiting(true)

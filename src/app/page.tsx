@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { listSessions } from '@/lib/storage'
-import { getSavedGroups, type SavedGroup } from '@/lib/savedGroups'
-import { getMyVenmoHandle, setMyVenmoHandle } from '@/lib/userSettings'
+import { useSavedGroups } from '@/lib/savedGroups'
+import { useMyVenmoHandle, setMyVenmoHandle } from '@/lib/userSettings'
 import type { Session } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -14,22 +14,18 @@ const SPLITS_ON_HOME = 3
 
 export default function Home() {
   const [sessions, setSessions] = useState<Session[]>([])
-  const [groups, setGroups] = useState<SavedGroup[]>([])
-  const [venmoHandle, setVenmoHandle] = useState('')
+  const groups = useSavedGroups()
+  const venmoHandle = useMyVenmoHandle() ?? ''
   const [editingVenmo, setEditingVenmo] = useState(false)
   const [venmoInput, setVenmoInput] = useState('')
 
   useEffect(() => {
+    // Async IndexedDB read: nothing to hand useSyncExternalStore synchronously
     listSessions().then(setSessions)
-    setGroups(getSavedGroups())
-    const handle = getMyVenmoHandle()
-    if (handle) setVenmoHandle(handle)
   }, [])
 
   function saveVenmo() {
-    const cleaned = venmoInput.replace(/^@/, '').trim()
-    setMyVenmoHandle(cleaned)
-    setVenmoHandle(cleaned)
+    setMyVenmoHandle(venmoInput)
     setEditingVenmo(false)
   }
 

@@ -57,6 +57,9 @@ export default function NewSplitPage() {
   const [canProceed, setCanProceed] = useState(false)
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect --
+       Seeds the draft once from ?group= and localStorage; neither is available
+       during prerender, so this can't move into render. */
     const groupId = new URLSearchParams(window.location.search).get('group')
     if (!groupId) return
     const group = getSavedGroup(groupId)
@@ -70,6 +73,7 @@ export default function NewSplitPage() {
     setDraft(d => ({ ...d, people }))
     setCanProceed(people.length >= 2)
     setAddPeopleKey(k => k + 1) // remount AddPeople with new initialPeople
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [])
   const stepRef = useRef<StepHandle>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
