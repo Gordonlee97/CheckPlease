@@ -3,8 +3,7 @@
 import { useState, useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 import type { Session } from '@/lib/types'
 import type { PersonShare } from '@/lib/splitting'
-import { buildShareUrl, buildPlainText } from '@/lib/share'
-import { getMyVenmoHandle } from '@/lib/userSettings'
+import { useShareActions } from '@/hooks/useShareActions'
 import { Button } from '@/components/ui/Button'
 
 interface Props {
@@ -89,8 +88,7 @@ function ShareCard({ share, index, session }: ShareCardProps) {
 }
 
 export function SummaryView({ session, shares, readOnly = false, onDone, ref, onReadyChange }: Props) {
-  const [toast, setToast] = useState<string | null>(null)
-  const [sharing, setSharing] = useState(false)
+  const { toast, sharing, shareLink, copyText } = useShareActions(session, shares)
   const submitRef = useRef<() => void>(() => {})
   submitRef.current = () => onDone?.()
   useImperativeHandle(ref, () => ({ submit: () => submitRef.current() }), [])
@@ -98,38 +96,6 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
   useEffect(() => {
     onReadyChange?.(true)
   }, [onReadyChange])
-
-  function showToast(msg: string) {
-    setToast(msg)
-    setTimeout(() => setToast(null), 2500)
-  }
-
-  async function handleShareLink() {
-    if (sharing) return
-    setSharing(true)
-    try {
-      const url = buildShareUrl(session)
-      if (navigator.share) {
-        try { await navigator.share({ title: 'CheckPlease split', url }); return } catch {}
-      }
-      try { await navigator.clipboard.writeText(url); showToast('Link copied to clipboard!') }
-      catch { showToast('Could not copy link') }
-    } finally {
-      setSharing(false)
-    }
-  }
-
-  async function handleCopyText() {
-    if (sharing) return
-    setSharing(true)
-    try {
-      const text = buildPlainText(session, shares, getMyVenmoHandle())
-      try { await navigator.clipboard.writeText(text); showToast('Copied to clipboard!') }
-      catch { showToast('Could not copy text') }
-    } finally {
-      setSharing(false)
-    }
-  }
 
   return (
     <div>
@@ -150,8 +116,8 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
         <>
           <div className="fixed bottom-0 left-0 right-0 pt-8 pb-6-safe bg-gradient-to-t from-bg to-transparent pointer-events-none">
             <div className="max-w-md mx-auto px-6 pointer-events-auto flex gap-3">
-              <Button fullWidth onClick={handleShareLink} disabled={sharing}>Share link</Button>
-              <Button fullWidth variant="ghost" onClick={handleCopyText} disabled={sharing}>Copy text</Button>
+              <Button fullWidth onClick={shareLink} disabled={sharing}>Share link</Button>
+              <Button fullWidth variant="ghost" onClick={copyText} disabled={sharing}>Copy text</Button>
             </div>
           </div>
           {toast && (
