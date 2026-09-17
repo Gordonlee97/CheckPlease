@@ -53,7 +53,7 @@ A new split has five steps. A progress bar at the top lets you go back to earlie
 |---|---|
 | **1. Who's splitting?** | Add everyone at the table (at least 2 people). Names you've used before appear as suggestions. You can also load a saved group, add optional Venmo handles, or save this table as a new group. |
 | **2. Scan receipt** | Take a photo of the receipt, or choose one from your gallery. The app reads it in a few seconds. No receipt, or the scan can't read it? Tap **Enter items manually** and type the items yourself. |
-| **3. Review items** | Check the items, prices, restaurant name, tax, and tip. Items marked ⚠ were hard to read, so double-check those. Fix anything that's wrong, remove extra lines, or add missing items. The total updates as you edit. |
+| **3. Review items** | Check the items, prices, restaurant name, tax, and tip. Items marked ⚠ were hard to read, so double-check those. Fix anything that's wrong, remove extra lines, or add missing items. The total updates as you edit. An item the scan couldn't price is outlined in red — type the price or delete the row, since you can't continue while one is unfinished. |
 | **4. Assign items** | Tap a person's name under each item to assign it to them. Tap several names for a shared item, or **All** for something everyone shared. **Split equally between everyone** assigns every item to the whole table. You can't continue until every item is assigned. Unassigned items are outlined in red. |
 | **5. Totals** | See each person's total and what's in it. Tap **Share link** or **Copy text** to send results, or **Request on Venmo** next to a person. Tap **Done** to save the split to your history. |
 
@@ -95,7 +95,10 @@ Yes. It runs in your phone's browser. You can also use **Add to Home Screen** so
 Amounts are shown in dollars. Receipts in other currencies will still split correctly, but they'll display with a `$` sign.
 
 **Can I delete a past split?**
-Not currently. You can delete saved groups from the group's edit screen.
+Yes. Open the split from the home screen or All Splits, then tap **Delete split** at the bottom and confirm. It's gone for good — there's no undo and no backup. Saved groups are deleted the same way, from the group's edit screen.
+
+**I got interrupted halfway through a split. Did I lose it?**
+No. The app saves as you go, and the home screen shows a **Resume split** card. The only thing not kept is the receipt photo, so if you were still on the scan step you'd retake it.
 
 **Why does "Request on Venmo" not do anything?**
 The button opens the Venmo app, so it only works on a phone with Venmo installed.
@@ -113,10 +116,10 @@ The button opens the Venmo app, so it only works on a phone with Venmo installed
 | Receipt OCR (primary) | Azure AI Document Intelligence, `prebuilt-receipt` model |
 | Receipt OCR (fallback) | Claude Opus 5 vision + structured outputs via `@anthropic-ai/sdk` |
 | Rate limiting | [`@upstash/ratelimit`](https://github.com/upstash/ratelimit-js) + Upstash Redis on `/api/scan` |
-| Local persistence | IndexedDB via [`idb`](https://github.com/jakearchibald/idb) for splits, `localStorage` for groups, names, and settings |
+| Local persistence | IndexedDB via [`idb`](https://github.com/jakearchibald/idb) for split history; `localStorage` for groups, names, settings, and the in-progress draft |
 | Share links | [`lz-string`](https://github.com/pieroxy/lz-string) compression in the URL hash |
 | Native wrapper | Capacitor 7 (iOS / Android), experimental |
-| Tests | Jest + ts-jest |
+| Tests | Jest + ts-jest, jsdom for component tests, `fake-indexeddb` for the storage layer |
 | Hosting | Vercel |
 
 > ⚠️ **Heads-up for contributors:** This project uses Next.js 16, which has breaking changes from older versions. Before changing framework-level code, read the relevant guide in `node_modules/next/dist/docs/` (see [`AGENTS.md`](AGENTS.md)).
@@ -198,13 +201,17 @@ src/
     ├── splitting.ts          # computeSplit(): per-person totals
     ├── ocr.ts                # Parse Azure and Claude responses into ScanResult
     ├── share.ts              # Share-link encoding and plain-text summary
-    ├── storage.ts            # IndexedDB session history
+    ├── storage.ts            # IndexedDB split history (save/list/get/delete)
+    ├── draft.ts              # localStorage: the in-progress split
+    ├── localStorageStore.ts  # useSyncExternalStore plumbing for the stores below
     ├── savedGroups.ts        # localStorage: groups
     ├── savedNames.ts         # localStorage: name autocomplete
     ├── userSettings.ts       # localStorage: your Venmo handle
+    ├── rateLimit.ts          # Per-IP scan limit (server)
     ├── imageUtils.ts         # Client-side image resize → base64
     └── personColors.ts       # Per-person color palette
-__tests__/                    # Jest tests for splitting, OCR parsing, sharing
+__tests__/                    # Jest tests: splitting, OCR, sharing, storage, draft, steps
+test-utils/                   # Jest setup (structuredClone polyfill for jsdom)
 docs/superpowers/             # Original design spec and implementation plan
 ```
 
@@ -247,9 +254,9 @@ The denominator is the sum of item prices after the user's edits, not the subtot
 
 ### State and persistence
 
-- **In progress:** The draft split is React state in `app/new/page.tsx`, so refreshing mid-flow loses it. Each step component exposes a `submit()` handle and reports readiness through `onReadyChange`, which lets the page's fixed bottom button drive navigation.
-- **Finished splits:** Saved to IndexedDB (database `checkplease`, store `sessions`) when the user taps **Done**.
-- **Groups, name suggestions, your Venmo handle:** Saved to `localStorage` under keys prefixed with `checkplease:`.
+- **In progress:** The draft split is React state in `app/new/page.tsx`, mirrored to `localStorage` by `src/lib/draft.ts` on every change, so a refresh doesn't lose it. Each step exposes a `submit()` handle, reports readiness through `onReadyChange` (driving the fixed bottom button), and reports edits through `onEdit` so keystrokes reach the draft before the step is submitted. The receipt photo isn't part of the draft — a `File` can't be serialized. The home screen offers the draft as a **Resume split** card (`/new?resume=1`); nothing resumes automatically.
+- **Finished splits:** Saved to IndexedDB (database `checkplease`, store `sessions`) when the user taps **Done**, which also clears the draft. Deleting a split (`deleteSession`) is permanent.
+- **Groups, name suggestions, your Venmo handle, the draft:** `localStorage` under keys prefixed with `checkplease:`. Components read them through `useSyncExternalStore` (`src/lib/localStorageStore.ts`), so a write from anywhere updates every screen showing that data, and reads stay hydration-safe on prerendered pages.
 
 ### Sharing
 
@@ -284,7 +291,7 @@ The app is built for [Vercel](https://vercel.com):
 
 If you deploy to a domain other than `checkplease.vercel.app`, add it to `ALLOWED_ORIGINS` in `src/app/api/scan/route.ts`, and update the URLs hardcoded in the `build:ios` / `build:android` scripts.
 
-The app includes a web manifest (`public/manifest.json`), so it can be added to a phone's home screen.
+The app includes a web manifest (`public/manifest.json`) plus `src/app/apple-icon.png`, so it installs to a phone's home screen with the right icon on both Android and iOS.
 
 ## Mobile builds (Capacitor)
 
@@ -299,8 +306,7 @@ npm run build:android && npm run open:android
 
 ## Known limitations
 
-- **Drafts aren't saved.** Refreshing or leaving during a split loses progress.
-- **Splits can't be deleted** from history.
+- **One draft at a time.** Starting a new split replaces the saved one (after a confirm), and the receipt photo isn't part of the draft.
 - **USD formatting only.**
 - **Receipt discounts and service charges** aren't treated specially. They come through as whatever the OCR returns, so check them on the Review step.
 - **The scan endpoint has no authentication**, only a per-IP rate limit and a CORS allowlist. Browsers honour CORS; `curl` doesn't. Anyone who finds the URL can send it up to 10 images an hour per IP, spending your Azure and Anthropic credits. Spending caps in those consoles are the backstop.
