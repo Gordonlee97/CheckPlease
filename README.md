@@ -25,8 +25,7 @@ No accounts or sign-ups, and your friends don't need to install anything.
   - [Architecture](#architecture)
   - [Testing](#testing)
   - [Deployment](#deployment)
-  - [Mobile builds (Capacitor)](#mobile-builds-capacitor)
-  - [Known limitations](#known-limitations)
+    - [Known limitations](#known-limitations)
 
 ---
 
@@ -118,7 +117,7 @@ The button opens the Venmo app, so it only works on a phone with Venmo installed
 | Rate limiting | [`@upstash/ratelimit`](https://github.com/upstash/ratelimit-js) + Upstash Redis on `/api/scan` |
 | Local persistence | IndexedDB via [`idb`](https://github.com/jakearchibald/idb) for split history; `localStorage` for groups, names, settings, and the in-progress draft |
 | Share links | [`lz-string`](https://github.com/pieroxy/lz-string) compression in the URL hash |
-| Native wrapper | Capacitor 7 (iOS / Android), experimental |
+| Install on a phone | PWA: web manifest + `apple-icon.png`, added to the home screen. No native wrapper. |
 | Tests | Jest + ts-jest, jsdom for component tests, `fake-indexeddb` for the storage layer |
 | Hosting | Vercel |
 
@@ -153,7 +152,7 @@ Put these in `.env.local`. All `.env*` files are gitignored.
 | `ANTHROPIC_API_KEY` | Server | Yes | Anthropic API key for the Claude fallback |
 | `UPSTASH_REDIS_REST_URL` | Server | Production | Upstash Redis REST URL, for rate limiting `/api/scan` |
 | `UPSTASH_REDIS_REST_TOKEN` | Server | Production | Upstash Redis REST token |
-| `NEXT_PUBLIC_SCAN_API_URL` | Client | No | Full URL of the scan endpoint. Defaults to `/api/scan`. Set it for native builds, which have no local API. |
+| `NEXT_PUBLIC_SCAN_API_URL` | Client | No | Full URL of the scan endpoint. Defaults to `/api/scan`. Only needed if the client is served somewhere without the API route. |
 | `NEXT_PUBLIC_SHARE_BASE_URL` | Client | No | Base URL used in share links. Defaults to `window.location.origin`. |
 
 If the Azure variables aren't set, every scan goes straight to Claude. The app still works, but it's slower and item confidence warnings (⚠) won't appear.
@@ -176,8 +175,6 @@ ANTHROPIC_API_KEY=sk-ant-...
 | `npm start` | Serve the production build |
 | `npm run lint` | Run ESLint |
 | `npm test` | Run the Jest unit tests |
-| `npm run build:ios` / `build:android` | Build against the hosted API and run `cap sync` (see [Mobile builds](#mobile-builds-capacitor)) |
-| `npm run open:ios` / `open:android` | Open the native project in Xcode or Android Studio |
 
 ## Project structure
 
@@ -289,20 +286,15 @@ The app is built for [Vercel](https://vercel.com):
    - Or create one at [console.upstash.com](https://console.upstash.com) and add `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` yourself.
 4. Deploy. The scan route sets `maxDuration = 60` so Azure polling plus the Claude fallback has time to finish. Environment variables only reach new deployments, so redeploy after changing them.
 
-If you deploy to a domain other than `checkplease.vercel.app`, add it to `ALLOWED_ORIGINS` in `src/app/api/scan/route.ts`, and update the URLs hardcoded in the `build:ios` / `build:android` scripts.
+If you deploy to a domain other than `checkplease.vercel.app`, add it to `ALLOWED_ORIGINS` in `src/app/api/scan/route.ts`.
 
 The app includes a web manifest (`public/manifest.json`) plus `src/app/apple-icon.png`, so it installs to a phone's home screen with the right icon on both Android and iOS.
 
-## Mobile builds (Capacitor)
+## Native apps
 
-> 🚧 **Experimental.** Capacitor dependencies and scripts are in `package.json`, but the repository doesn't yet include a `capacitor.config.*` file, the `ios/` or `android/` native projects, or a static export setting in `next.config.ts`. The steps below describe the intended workflow, not a tested one.
+There are none, by choice. CheckPlease installs to a phone's home screen as a PWA, which covers what a wrapper would mostly have provided. Capacitor dependencies and `build:ios` / `build:android` scripts used to sit in `package.json`, but without a `capacitor.config`, native projects, or a static export they could never run, so they were removed.
 
-The intended flow is to build the web app with `NEXT_PUBLIC_SCAN_API_URL` and `NEXT_PUBLIC_SHARE_BASE_URL` pointing at the hosted Vercel deployment (native apps have no local API route), then run `npx cap sync` and open the project in Xcode or Android Studio:
-
-```bash
-npm run build:ios && npm run open:ios
-npm run build:android && npm run open:android
-```
+If App Store or Play listings are wanted later, the pieces needed are: `output: 'export'` in `next.config.ts`, a Capacitor config, `npx cap add ios/android`, and `NEXT_PUBLIC_SCAN_API_URL` / `NEXT_PUBLIC_SHARE_BASE_URL` pointed at the hosted deployment, since a packaged app has no API route of its own. The business logic transfers unchanged. `capacitor://localhost` is still in the CORS allowlist for that eventuality.
 
 ## Known limitations
 

@@ -23,19 +23,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:ios": "cross-env NEXT_PUBLIC_SCAN_API_URL=https://checkplease.vercel.app/api/scan NEXT_PUBLIC_SHARE_BASE_URL=https://checkplease.vercel.app next build && npx cap sync ios",
-    "open:ios": "npx cap open ios",
-    "build:android": "cross-env NEXT_PUBLIC_SCAN_API_URL=https://checkplease.vercel.app/api/scan NEXT_PUBLIC_SHARE_BASE_URL=https://checkplease.vercel.app next build && npx cap sync android",
-    "open:android": "npx cap open android",
     "start": "next start",
     "lint": "eslint",
     "test": "jest"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
-    "@capacitor/android": "^7.6.2",
-    "@capacitor/core": "^7.6.2",
-    "@capacitor/ios": "^7.6.2",
     "@upstash/ratelimit": "^2.1.0",
     "@upstash/redis": "^1.38.4",
     "idb": "^8.0.3",
@@ -47,14 +40,12 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.6.2",
     "@tailwindcss/postcss": "^4",
     "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
-    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "fake-indexeddb": "^6.2.5",
