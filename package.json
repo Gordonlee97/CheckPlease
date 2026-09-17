@@ -5,6 +5,9 @@
   "jest": {
     "preset": "ts-jest/presets/js-with-ts",
     "testEnvironment": "node",
+    "setupFiles": [
+      "<rootDir>/test-utils/jest.setup.ts"
+    ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
     },
@@ -54,6 +57,7 @@
     "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "fake-indexeddb": "^6.2.5",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
     "tailwindcss": "^4",
