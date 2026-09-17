@@ -28,3 +28,8 @@ export async function getSession(id: string): Promise<Session | undefined> {
   const db = await getDB()
   return db.get(STORE, id)
 }
+
+export async function deleteSession(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete(STORE, id)
+}
