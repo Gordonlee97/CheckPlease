@@ -7,8 +7,8 @@ import type { Person, Item, ScanResult, Step } from '@/lib/types'
 import { saveSession } from '@/lib/storage'
 import { recordNames } from '@/lib/savedNames'
 import { getSavedGroup } from '@/lib/savedGroups'
+import { getDraft, saveDraft, clearDraft } from '@/lib/draft'
 import { useShareActions } from '@/hooks/useShareActions'
-import Link from 'next/link'
 import { AddPeople } from '@/components/steps/AddPeople'
 import { Scan } from '@/components/steps/Scan'
 import { Review } from '@/components/steps/Review'
@@ -51,30 +51,79 @@ export default function NewSplitPage() {
   const [completedSteps, setCompletedSteps] = useState<Set<Step>>(new Set())
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
   const [addPeopleKey, setAddPeopleKey] = useState(0)
-  const [sessionId] = useState(() => uuidv4())
-  const [createdAt] = useState(() => new Date().toISOString())
+  const [sessionId, setSessionId] = useState(() => uuidv4())
+  const [createdAt, setCreatedAt] = useState(() => new Date().toISOString())
   const [scannedFile, setScannedFile] = useState<File | null>(null)
   const [canProceed, setCanProceed] = useState(false)
+  // Nothing is persisted until the stored draft (if any) has been consumed,
+  // so an empty first render can't wipe it.
+  const [hydrated, setHydrated] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect --
-       Seeds the draft once from ?group= and localStorage; neither is available
-       during prerender, so this can't move into render. */
-    const groupId = new URLSearchParams(window.location.search).get('group')
-    if (!groupId) return
-    const group = getSavedGroup(groupId)
-    if (!group) return
-    const people = group.people.map(gp => ({
-      id: uuidv4(),
-      name: gp.name,
-      color: gp.color,
-      venmoHandle: gp.venmoHandle,
-    }))
-    setDraft(d => ({ ...d, people }))
-    setCanProceed(people.length >= 2)
-    setAddPeopleKey(k => k + 1) // remount AddPeople with new initialPeople
+       Seeds the draft once from ?resume, ?group= and localStorage; none of
+       those are available during prerender, so this can't move into render. */
+    const params = new URLSearchParams(window.location.search)
+
+    if (params.get('resume')) {
+      const saved = getDraft()
+      if (saved) {
+        setSessionId(saved.sessionId)
+        setCreatedAt(saved.createdAt)
+        setDraft({
+          people: saved.people,
+          items: saved.items,
+          subtotal: saved.subtotal,
+          tax: saved.tax,
+          tip: saved.tip,
+          total: saved.total,
+          label: saved.label,
+        })
+        setCompletedSteps(new Set(saved.completedSteps))
+        setStep(saved.step)
+        setAddPeopleKey(k => k + 1)
+        setHydrated(true)
+        return
+      }
+    }
+
+    // Starting fresh: the home screen already confirmed discarding any draft
+    clearDraft()
+
+    const groupId = params.get('group')
+    if (groupId) {
+      const group = getSavedGroup(groupId)
+      if (group) {
+        const people = group.people.map(gp => ({
+          id: uuidv4(),
+          name: gp.name,
+          color: gp.color,
+          venmoHandle: gp.venmoHandle,
+        }))
+        setDraft(d => ({ ...d, people }))
+        setCanProceed(people.length >= 2)
+        setAddPeopleKey(k => k + 1) // remount AddPeople with new initialPeople
+      }
+    }
+    setHydrated(true)
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [])
+
+  // Keep the stored draft in step with what's on screen
+  useEffect(() => {
+    if (!hydrated || step === 'summary') return
+    // Nothing entered yet — don't leave an empty draft behind
+    if (draft.people.length === 0 && draft.items.length === 0) return
+    saveDraft({
+      sessionId,
+      createdAt,
+      savedAt: new Date().toISOString(),
+      step,
+      completedSteps: [...completedSteps],
+      ...draft,
+    })
+  }, [hydrated, sessionId, createdAt, step, completedSteps, draft])
   const stepRef = useRef<StepHandle>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -161,6 +210,11 @@ export default function NewSplitPage() {
     navigate('summary')
   }
 
+  function handleDiscard() {
+    clearDraft()
+    router.push('/')
+  }
+
   async function handleSummaryDone() {
     const session = {
       id: sessionId,
@@ -174,6 +228,7 @@ export default function NewSplitPage() {
       total: draft.total,
     }
     await saveSession(session)
+    clearDraft() // it lives in history now
     router.push('/')
   }
 
@@ -208,9 +263,20 @@ export default function NewSplitPage() {
             ) : (
               <div />
             )}
-            <Link href="/" className="text-text-secondary hover:text-text-primary text-sm">
-              Cancel
-            </Link>
+            {confirmCancel ? (
+              <div className="flex items-center gap-3 animate-fade-in">
+                <span className="text-text-secondary/60 text-xs">Discard?</span>
+                <button onClick={handleDiscard} className="text-red-400 text-sm">Discard</button>
+                <button onClick={() => setConfirmCancel(false)} className="text-text-secondary/40 text-sm">Keep</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmCancel(true)}
+                className="text-text-secondary hover:text-text-primary text-sm"
+              >
+                Cancel
+              </button>
+            )}
           </div>
 
           <ProgressBar
@@ -227,6 +293,7 @@ export default function NewSplitPage() {
                 key={addPeopleKey}
                 initialPeople={draft.people}
                 onDone={handlePeopleDone}
+                onEdit={people => setDraft(d => ({ ...d, people }))}
                 ref={stepRef}
                 onReadyChange={setCanProceed}
               />
@@ -248,6 +315,9 @@ export default function NewSplitPage() {
                 tip={draft.tip}
                 label={draft.label}
                 onDone={handleReviewDone}
+                onEdit={(items, tax, tip, total, label) => setDraft(d => ({
+                  ...d, items, tax, tip, total, subtotal: items.reduce((sum, i) => sum + i.price, 0), label: label ?? d.label,
+                }))}
                 ref={stepRef}
                 onReadyChange={setCanProceed}
               />
@@ -257,6 +327,7 @@ export default function NewSplitPage() {
                 people={draft.people}
                 items={draft.items}
                 onDone={handleAssignDone}
+                onEdit={items => setDraft(d => ({ ...d, items }))}
                 ref={stepRef}
                 onReadyChange={setCanProceed}
               />

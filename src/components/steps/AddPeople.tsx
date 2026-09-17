@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useImperativeHandle, type Ref, KeyboardEvent, MouseEvent } from 'react'
+import { useState, useEffect, useImperativeHandle, useRef, type Ref, KeyboardEvent, MouseEvent } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Person } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
@@ -13,11 +13,13 @@ import { saveGroup, useSavedGroups, type SavedGroup } from '@/lib/savedGroups'
 interface Props {
   initialPeople?: Person[]
   onDone: (people: Person[]) => void
+  // Fires whenever the list changes so the saved draft survives a refresh
+  onEdit?: (people: Person[]) => void
   ref?: Ref<{ submit: () => void }>
   onReadyChange?: (ready: boolean) => void
 }
 
-export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) {
+export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }: Props) {
   const [people, setPeople] = useState<Person[]>(initialPeople ?? [])
   const [name, setName] = useState('')
   const savedNames = useSavedNames()
@@ -34,6 +36,13 @@ export function AddPeople({ initialPeople, onDone, ref, onReadyChange }: Props) 
   useEffect(() => {
     onReadyChange?.(people.length >= 2)
   }, [people.length, onReadyChange])
+
+  const onEditRef = useRef(onEdit)
+  useEffect(() => { onEditRef.current = onEdit })
+
+  useEffect(() => {
+    onEditRef.current?.(people)
+  }, [people])
 
   const currentNames = people.map(p => p.name)
   const groupSavedVisible = savedSnapshot !== null &&
