@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useImperativeHandle, useEffect, type Ref } from 'react'
+import { useState, useImperativeHandle, useEffect, useRef, type Ref } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Item } from '@/lib/types'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { cn } from '@/lib/cn'
 
 interface ItemInput {
   id: string
@@ -16,6 +18,15 @@ interface ItemInput {
 
 function blankItem(): ItemInput {
   return { id: uuidv4(), name: '', priceStr: '', assignedTo: [] }
+}
+
+// An untouched row (the starter row, or one added by mistake) is ignored.
+function isEmptyRow(item: ItemInput): boolean {
+  return !item.name.trim() && !item.priceStr.trim()
+}
+
+function isComplete(item: ItemInput): boolean {
+  return Boolean(item.name.trim()) && parseFloat(item.priceStr) > 0
 }
 
 interface Props {
@@ -41,6 +52,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
           confidence: i.confidence,
         }))
   )
+  const itemCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [tax, setTax] = useState(initTax.toFixed(2))
   const [tip, setTip] = useState(initTip.toFixed(2))
   const [label, setLabel] = useState(initLabel ?? '')
@@ -87,21 +99,26 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
   }
 
   function handleDone() {
+    if (!canContinue) return
     const validItems: Item[] = items
-      .filter(i => i.name.trim() && parseFloat(i.priceStr) > 0)
+      .filter(isComplete)
       .map(i => ({ id: i.id, name: i.name, price: parseFloat(i.priceStr), assignedTo: i.assignedTo, confidence: i.confidence }))
-    if (validItems.length === 0) return
     onDone(validItems, Math.max(0, parseFloat(tax) || 0), Math.max(0, parseFloat(tip) || 0), computedTotal, label.trim() || undefined)
   }
 
-  const hasValidItems = items.some(i => i.name.trim() && parseFloat(i.priceStr) > 0)
+  // A half-filled row means the scan missed something. Silently dropping it
+  // would quietly remove money from the split, so it blocks instead.
+  const incomplete = items.filter(i => !isEmptyRow(i) && !isComplete(i))
+  const missingPrice = incomplete.filter(i => !(parseFloat(i.priceStr) > 0)).length
+  const missingName = incomplete.length - missingPrice
+  const canContinue = incomplete.length === 0 && items.some(isComplete)
 
   // No deps: rebuilt each render so submit() always sees the current items
   useImperativeHandle(ref, () => ({ submit: handleDone }))
 
   useEffect(() => {
-    onReadyChange?.(hasValidItems)
-  }, [hasValidItems, onReadyChange])
+    onReadyChange?.(canContinue)
+  }, [canContinue, onReadyChange])
 
   return (
     <div>
@@ -123,7 +140,14 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
       <div className="flex flex-col gap-2 mb-4">
         {items.map(item => (
-          <Card key={item.id} className="flex gap-2 items-center">
+          <Card
+            key={item.id}
+            ref={el => { itemCardRefs.current[item.id] = el }}
+            className={cn(
+              'flex gap-2 items-center',
+              !isEmptyRow(item) && !isComplete(item) && 'ring-2 ring-red-500/70'
+            )}
+          >
             {item.confidence !== undefined && item.confidence < 0.8 && (
               <span
                 className="text-amber-400 text-sm shrink-0"
@@ -147,6 +171,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
                 type="text"
                 inputMode="decimal"
                 value={item.priceStr}
+                placeholder="0.00"
                 onChange={e => updateItem(item.id, 'priceStr', e.target.value)}
                 onBlur={() => formatItem(item.id)}
                 onKeyDown={e => { if (e.key === 'Enter') { formatItem(item.id); focusNextReviewInput(e.currentTarget) } }}
@@ -170,6 +195,23 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
       >
         + Add item
       </button>
+
+      {incomplete.length > 0 && (
+        <div className="flex flex-col items-center gap-2 mb-6">
+          <p className="text-sm text-red-400">
+            {[
+              missingPrice > 0 && `${missingPrice} item${missingPrice !== 1 ? 's' : ''} need${missingPrice === 1 ? 's' : ''} a price`,
+              missingName > 0 && `${missingName} item${missingName !== 1 ? 's' : ''} need${missingName === 1 ? 's' : ''} a name`,
+            ].filter(Boolean).join(' · ')}
+          </p>
+          <Button
+            variant="ghost"
+            onClick={() => itemCardRefs.current[incomplete[0].id]?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+          >
+            Go to item ↓
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-2 mb-8">
         {([
