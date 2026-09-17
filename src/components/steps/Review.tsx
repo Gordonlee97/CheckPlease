@@ -35,11 +35,13 @@ interface Props {
   tip: number
   label?: string
   onDone: (items: Item[], tax: number, tip: number, total: number, label?: string) => void
+  // Fires on every edit so the saved draft survives a refresh mid-typing
+  onEdit?: (items: Item[], tax: number, tip: number, total: number, label?: string) => void
   ref?: Ref<{ submit: () => void }>
   onReadyChange?: (ready: boolean) => void
 }
 
-export function Review({ items: initialItems, tax: initTax, tip: initTip, label: initLabel, onDone, ref, onReadyChange }: Props) {
+export function Review({ items: initialItems, tax: initTax, tip: initTip, label: initLabel, onDone, onEdit, ref, onReadyChange }: Props) {
   const [items, setItems] = useState<ItemInput[]>(() =>
     initialItems.length === 0
       // Manual entry (or a scan that found nothing): give them a row to type into
@@ -119,6 +121,22 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
   useEffect(() => {
     onReadyChange?.(canContinue)
   }, [canContinue, onReadyChange])
+
+  const onEditRef = useRef(onEdit)
+  useEffect(() => { onEditRef.current = onEdit })
+
+  // Keep the parent's draft in step with what's typed, so a refresh keeps it
+  useEffect(() => {
+    onEditRef.current?.(
+      items.filter(isComplete).map(i => ({
+        id: i.id, name: i.name, price: parseFloat(i.priceStr), assignedTo: i.assignedTo, confidence: i.confidence,
+      })),
+      Math.max(0, parseFloat(tax) || 0),
+      Math.max(0, parseFloat(tip) || 0),
+      computedTotal,
+      label.trim() || undefined,
+    )
+  }, [items, tax, tip, computedTotal, label])
 
   return (
     <div>

@@ -10,11 +10,13 @@ interface Props {
   people: Person[]
   items: Item[]
   onDone: (items: Item[]) => void
+  // Fires on every assignment change so the saved draft survives a refresh
+  onEdit?: (items: Item[]) => void
   ref?: Ref<{ submit: () => void }>
   onReadyChange?: (ready: boolean) => void
 }
 
-export function Assign({ people, items: initialItems, onDone, ref, onReadyChange }: Props) {
+export function Assign({ people, items: initialItems, onDone, onEdit, ref, onReadyChange }: Props) {
   const [items, setItems] = useState<Item[]>(initialItems)
   const itemCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -65,6 +67,13 @@ export function Assign({ people, items: initialItems, onDone, ref, onReadyChange
   useEffect(() => {
     onReadyChange?.(canContinue)
   }, [canContinue, onReadyChange])
+
+  const onEditRef = useRef(onEdit)
+  useEffect(() => { onEditRef.current = onEdit })
+
+  useEffect(() => {
+    onEditRef.current?.(items)
+  }, [items])
 
   return (
     <div>

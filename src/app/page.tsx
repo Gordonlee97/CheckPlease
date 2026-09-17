@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { listSessions } from '@/lib/storage'
 import { useSavedGroups } from '@/lib/savedGroups'
+import { useDraft } from '@/lib/draft'
 import { useMyVenmoHandle, setMyVenmoHandle } from '@/lib/userSettings'
 import type { Session } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
@@ -12,9 +13,21 @@ import { Card } from '@/components/ui/Card'
 const GROUPS_ON_HOME = 3
 const SPLITS_ON_HOME = 3
 
+function timeAgo(iso: string): string {
+  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days !== 1 ? 's' : ''} ago`
+}
+
 export default function Home() {
   const [sessions, setSessions] = useState<Session[]>([])
   const groups = useSavedGroups()
+  const draft = useDraft()
+  const [confirmNew, setConfirmNew] = useState(false)
   const venmoHandle = useMyVenmoHandle() ?? ''
   const [editingVenmo, setEditingVenmo] = useState(false)
   const [venmoInput, setVenmoInput] = useState('')
@@ -68,6 +81,26 @@ export default function Home() {
           )}
         </div>
         <div className="mb-8" />
+
+        {/* Unfinished split — offered, never resumed behind the user's back */}
+        {draft && (
+          <Link href="/new?resume=1" className="block mb-8">
+            <Card className="flex items-center justify-between py-3 border-gold/40 hover:border-gold transition-colors cursor-pointer">
+              <div className="min-w-0">
+                <p className="text-gold text-sm font-medium">Resume split · {timeAgo(draft.savedAt)}</p>
+                <p className="text-text-secondary text-xs mt-0.5 truncate">
+                  {[
+                    draft.label,
+                    draft.people.map(p => p.name).join(', ') || 'No one added yet',
+                    draft.items.length > 0 && `${draft.items.length} item${draft.items.length !== 1 ? 's' : ''}`,
+                  ].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+              <span className="text-gold text-sm shrink-0 ml-3">→</span>
+            </Card>
+          </Link>
+        )}
+
         {/* Groups */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
@@ -152,9 +185,25 @@ export default function Home() {
 
       <div className="fixed bottom-0 left-0 right-0 pt-10 pb-6-safe bg-gradient-to-t from-bg to-transparent pointer-events-none">
         <div className="max-w-md mx-auto px-6 pointer-events-auto">
-          <Link href="/new">
-            <Button fullWidth>+ New Split</Button>
-          </Link>
+          {draft && confirmNew ? (
+            <div className="flex flex-col gap-2 animate-fade-in">
+              <p className="text-center text-text-secondary text-xs">
+                Starting fresh discards your unfinished split.
+              </p>
+              <div className="flex gap-3">
+                <Link href="/new" className="flex-1" onClick={() => setConfirmNew(false)}>
+                  <Button fullWidth>Start fresh</Button>
+                </Link>
+                <Button fullWidth variant="ghost" onClick={() => setConfirmNew(false)}>Keep it</Button>
+              </div>
+            </div>
+          ) : draft ? (
+            <Button fullWidth onClick={() => setConfirmNew(true)}>+ New Split</Button>
+          ) : (
+            <Link href="/new">
+              <Button fullWidth>+ New Split</Button>
+            </Link>
+          )}
         </div>
       </div>
     </>
