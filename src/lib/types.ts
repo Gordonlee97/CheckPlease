@@ -19,6 +19,7 @@ export interface Session {
   id: string
   createdAt: string    // ISO datetime
   label?: string       // restaurant name from receipt
+  currency?: string    // ISO 4217; absent on splits made before currency support
   people: Person[]
   items: Item[]
   subtotal: number     // from receipt
@@ -29,6 +30,7 @@ export interface Session {
 
 export interface ScanResult {
   label?: string
+  currency?: string    // ISO 4217, when the receipt says
   items: Array<{ name: string; price: number; confidence?: number }>
   subtotal: number
   tax: number

@@ -3,7 +3,7 @@
  */
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { Review } from '../src/components/steps/Review'
+import { Review, type ReviewResult } from '../src/components/steps/Review'
 import type { Item } from '../src/lib/types'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -72,8 +72,9 @@ describe('Review: item missing a price', () => {
 
     act(() => ref.current!.submit())
     expect(onDone).toHaveBeenCalledTimes(1)
-    const items = onDone.mock.calls[0][0] as Item[]
-    expect(items.map(i => [i.name, i.price])).toEqual([['Tacos', 12], ['Mystery item', 8.5]])
+    const result = onDone.mock.calls[0][0] as ReviewResult
+    expect(result.items.map(i => [i.name, i.price])).toEqual([['Tacos', 12], ['Mystery item', 8.5]])
+    expect(result.currency).toBe('USD')
   })
 
   it('unblocks when the item is deleted instead', () => {
@@ -83,7 +84,7 @@ describe('Review: item missing a price', () => {
     expect(ready(onReadyChange)).toBe(true)
 
     act(() => ref.current!.submit())
-    expect((onDone.mock.calls[0][0] as Item[]).map(i => i.name)).toEqual(['Tacos'])
+    expect((onDone.mock.calls[0][0] as ReviewResult).items.map(i => i.name)).toEqual(['Tacos'])
   })
 
   it('ignores a completely empty row', () => {
@@ -93,7 +94,7 @@ describe('Review: item missing a price', () => {
     expect(ready(onReadyChange)).toBe(true)
 
     act(() => ref.current!.submit())
-    expect((onDone.mock.calls[0][0] as Item[]).map(i => i.name)).toEqual(['Tacos'])
+    expect((onDone.mock.calls[0][0] as ReviewResult).items.map(i => i.name)).toEqual(['Tacos'])
   })
 
   it('blocks a row that has a price but no name', () => {
@@ -103,5 +104,44 @@ describe('Review: item missing a price', () => {
     type(priceInputs()[1], '4.00')
     expect(ready(onReadyChange)).toBe(false)
     expect(container.textContent).toContain('needs a name')
+  })
+})
+
+describe('Review: currency', () => {
+  const priced: Item[] = [{ id: '1', name: 'Kaffee', price: 4, assignedTo: [] }]
+
+  function renderWith(currency?: string) {
+    const onDone = jest.fn()
+    const ref = { current: null as { submit: () => void } | null }
+    act(() => root.render(
+      <Review ref={ref} items={priced} tax={0} tip={0} currency={currency} onDone={onDone} />
+    ))
+    return { onDone, ref }
+  }
+
+  const select = () => container.querySelector('select') as HTMLSelectElement
+
+  it('starts from the detected currency and prefixes amounts with its symbol', () => {
+    renderWith('EUR')
+    expect(select().value).toBe('EUR')
+    expect(container.textContent).toContain('€')
+  })
+
+  it('defaults to USD when the receipt did not say', () => {
+    renderWith(undefined)
+    expect(select().value).toBe('USD')
+  })
+
+  it('lets the currency be corrected, and reports it on continue', () => {
+    const { onDone, ref } = renderWith('USD')
+
+    act(() => {
+      select().value = 'GBP'
+      select().dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    act(() => ref.current!.submit())
+
+    expect((onDone.mock.calls[0][0] as ReviewResult).currency).toBe('GBP')
+    expect(container.textContent).toContain('£')
   })
 })

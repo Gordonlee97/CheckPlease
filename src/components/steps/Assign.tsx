@@ -5,10 +5,12 @@ import type { Item, Person } from '@/lib/types'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
+import { formatMoney } from '@/lib/money'
 
 interface Props {
   people: Person[]
   items: Item[]
+  currency?: string
   onDone: (items: Item[]) => void
   // Fires on every assignment change so the saved draft survives a refresh
   onEdit?: (items: Item[]) => void
@@ -16,7 +18,7 @@ interface Props {
   onReadyChange?: (ready: boolean) => void
 }
 
-export function Assign({ people, items: initialItems, onDone, onEdit, ref, onReadyChange }: Props) {
+export function Assign({ people, items: initialItems, currency, onDone, onEdit, ref, onReadyChange }: Props) {
   const [items, setItems] = useState<Item[]>(initialItems)
   const itemCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -116,14 +118,14 @@ export function Assign({ people, items: initialItems, onDone, onEdit, ref, onRea
                   )}
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="text-gold font-semibold">${item.price.toFixed(2)}</span>
+                  <span className="text-gold font-semibold">{formatMoney(item.price, currency)}</span>
                   {/* Always rendered so card height never shifts — invisible when 0-1 assigned */}
                   <span className={cn(
                     'text-text-secondary text-xs block',
                     item.assignedTo.length > 1 ? '' : 'invisible'
                   )}>
                     {item.assignedTo.length > 1
-                      ? `$${(item.price / item.assignedTo.length).toFixed(2)} each`
+                      ? `${formatMoney(item.price / item.assignedTo.length, currency)} each`
                       : ' '}
                   </span>
                 </div>

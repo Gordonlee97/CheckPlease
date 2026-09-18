@@ -11,7 +11,7 @@ import { getDraft, saveDraft, clearDraft } from '@/lib/draft'
 import { useShareActions } from '@/hooks/useShareActions'
 import { AddPeople } from '@/components/steps/AddPeople'
 import { Scan } from '@/components/steps/Scan'
-import { Review } from '@/components/steps/Review'
+import { Review, type ReviewResult } from '@/components/steps/Review'
 import { Assign } from '@/components/steps/Assign'
 import { SummaryView } from '@/components/steps/SummaryView'
 import { ProgressBar } from '@/components/ProgressBar'
@@ -40,6 +40,7 @@ interface Draft {
   tip: number
   total: number
   label?: string
+  currency?: string
 }
 
 const EMPTY_DRAFT: Draft = { people: [], items: [], subtotal: 0, tax: 0, tip: 0, total: 0 }
@@ -79,6 +80,7 @@ export default function NewSplitPage() {
           tip: saved.tip,
           total: saved.total,
           label: saved.label,
+          currency: saved.currency,
         })
         setCompletedSteps(new Set(saved.completedSteps))
         setStep(saved.step)
@@ -186,6 +188,7 @@ export default function NewSplitPage() {
       tip: result.tip,
       total: result.total,
       label: result.label,
+      currency: result.currency,
     }))
     markCompleted('scan')
     navigate('review')
@@ -197,11 +200,20 @@ export default function NewSplitPage() {
     navigate('review')
   }
 
-  function handleReviewDone(items: Item[], tax: number, tip: number, total: number, label?: string) {
-    const subtotal = items.reduce((sum, i) => sum + i.price, 0)
-    setDraft(d => ({ ...d, items, tax, tip, total, subtotal, label: label ?? d.label }))
+  function handleReviewDone(result: ReviewResult) {
+    applyReview(result)
     markCompleted('review')
     navigate('assign')
+  }
+
+  function applyReview({ items, tax, tip, total, label, currency }: ReviewResult) {
+    setDraft(d => ({
+      ...d,
+      items, tax, tip, total,
+      subtotal: items.reduce((sum, i) => sum + i.price, 0),
+      label: label ?? d.label,
+      currency,
+    }))
   }
 
   function handleAssignDone(items: Item[]) {
@@ -220,6 +232,7 @@ export default function NewSplitPage() {
       id: sessionId,
       createdAt,
       label: draft.label,
+      currency: draft.currency,
       people: draft.people,
       items: draft.items,
       subtotal: draft.subtotal,
@@ -236,6 +249,7 @@ export default function NewSplitPage() {
     id: sessionId,
     createdAt,
     label: draft.label,
+    currency: draft.currency,
     people: draft.people,
     items: draft.items,
     subtotal: draft.subtotal,
@@ -314,10 +328,9 @@ export default function NewSplitPage() {
                 tax={draft.tax}
                 tip={draft.tip}
                 label={draft.label}
+                currency={draft.currency}
                 onDone={handleReviewDone}
-                onEdit={(items, tax, tip, total, label) => setDraft(d => ({
-                  ...d, items, tax, tip, total, subtotal: items.reduce((sum, i) => sum + i.price, 0), label: label ?? d.label,
-                }))}
+                onEdit={applyReview}
                 ref={stepRef}
                 onReadyChange={setCanProceed}
               />
@@ -326,6 +339,7 @@ export default function NewSplitPage() {
               <Assign
                 people={draft.people}
                 items={draft.items}
+                currency={draft.currency}
                 onDone={handleAssignDone}
                 onEdit={items => setDraft(d => ({ ...d, items }))}
                 ref={stepRef}

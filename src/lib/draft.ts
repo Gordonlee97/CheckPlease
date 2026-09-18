@@ -20,6 +20,7 @@ export interface SplitDraft {
   tip: number
   total: number
   label?: string
+  currency?: string
 }
 
 const EMPTY: SplitDraft | null = null

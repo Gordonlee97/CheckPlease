@@ -1,8 +1,9 @@
 import { z } from 'zod'
+import { normalizeCurrency } from './money'
 import type { ScanResult } from './types'
 
 // Only the Azure prebuilt-receipt fields this app reads.
-interface AzureCurrencyField { valueCurrency?: { amount?: number }; confidence?: number }
+interface AzureCurrencyField { valueCurrency?: { amount?: number; currencyCode?: string }; confidence?: number }
 interface AzureItemEntry {
   valueObject?: {
     Description?: { valueString?: string }
@@ -33,8 +34,14 @@ export function parseAzureResponse(azureResult: AzureAnalyzeResponse): ScanResul
     confidence: entry.valueObject?.TotalPrice?.confidence as number | undefined,
   }))
 
+  // Azure tags each amount with a currency; the total is the most reliable one
+  const currency = normalizeCurrency(
+    fields.Total?.valueCurrency?.currencyCode ?? fields.SubTotal?.valueCurrency?.currencyCode,
+  )
+
   return {
     label: fields.MerchantName?.valueString,
+    currency,
     items: itemsArray,
     subtotal: fields.SubTotal?.valueCurrency?.amount ?? 0,
     tax: fields.TotalTax?.valueCurrency?.amount ?? 0,
@@ -47,6 +54,7 @@ export function parseAzureResponse(azureResult: AzureAnalyzeResponse): ScanResul
 // response to this shape, so no JSON extraction from free text is needed.
 export const ClaudeReceiptSchema = z.object({
   label: z.string().nullable().describe('Restaurant name, or null if not shown'),
+  currency: z.string().nullable().describe('ISO 4217 code for the amounts, e.g. USD or EUR; null if the receipt does not say'),
   items: z.array(z.object({
     name: z.string().describe('Item description as printed'),
     price: z.number().describe('Full line total: quantity × unit price'),
@@ -86,7 +94,7 @@ export function reconcileLowConfidence(azure: ScanResult, claude: ScanResult): S
     return { ...item, price: match.price }
   })
 
-  return { ...azure, items, label: azure.label ?? claude.label }
+  return { ...azure, items, label: azure.label ?? claude.label, currency: azure.currency ?? claude.currency }
 }
 
 export function hasLowConfidenceItem(result: ScanResult): boolean {
@@ -95,5 +103,9 @@ export function hasLowConfidenceItem(result: ScanResult): boolean {
 
 export function claudeReceiptToScanResult(receipt: ClaudeReceipt | null): ScanResult | null {
   if (!receipt) return null
-  return { ...receipt, label: receipt.label ?? undefined }
+  return {
+    ...receipt,
+    label: receipt.label ?? undefined,
+    currency: normalizeCurrency(receipt.currency),
+  }
 }
