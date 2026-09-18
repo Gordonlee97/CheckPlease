@@ -80,3 +80,17 @@ describe('buildPlainText', () => {
     expect(text).toContain('$7.80')
   })
 })
+
+describe('plain text in another currency', () => {
+  const euroShares: PersonShare[] = [
+    { personId: 'g', name: 'Gordon', itemSubtotal: 20, taxShare: 2, tipShare: 4, total: 26, assignedItems: [{ name: 'Kaffee', price: 20, shared: false }] },
+  ]
+
+  it('formats every amount with the session currency', () => {
+    const euroSession = { ...session, currency: 'EUR' }
+    const text = buildPlainText(euroSession, euroShares)
+
+    expect(text).toContain('€')
+    expect(text).not.toContain('$')
+  })
+})

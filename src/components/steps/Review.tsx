@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
+import { currencySymbol, normalizeCurrency, DEFAULT_CURRENCY } from '@/lib/money'
 
 interface ItemInput {
   id: string
@@ -29,19 +30,32 @@ function isComplete(item: ItemInput): boolean {
   return Boolean(item.name.trim()) && parseFloat(item.priceStr) > 0
 }
 
+// Currencies offered in the override. The detected one is added if missing.
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'MXN', 'KRW']
+
+export interface ReviewResult {
+  items: Item[]
+  tax: number
+  tip: number
+  total: number
+  label?: string
+  currency: string
+}
+
 interface Props {
   items: Item[]
   tax: number
   tip: number
   label?: string
-  onDone: (items: Item[], tax: number, tip: number, total: number, label?: string) => void
+  currency?: string
+  onDone: (result: ReviewResult) => void
   // Fires on every edit so the saved draft survives a refresh mid-typing
-  onEdit?: (items: Item[], tax: number, tip: number, total: number, label?: string) => void
+  onEdit?: (result: ReviewResult) => void
   ref?: Ref<{ submit: () => void }>
   onReadyChange?: (ready: boolean) => void
 }
 
-export function Review({ items: initialItems, tax: initTax, tip: initTip, label: initLabel, onDone, onEdit, ref, onReadyChange }: Props) {
+export function Review({ items: initialItems, tax: initTax, tip: initTip, label: initLabel, currency: initCurrency, onDone, onEdit, ref, onReadyChange }: Props) {
   const [items, setItems] = useState<ItemInput[]>(() =>
     initialItems.length === 0
       // Manual entry (or a scan that found nothing): give them a row to type into
@@ -58,6 +72,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
   const [tax, setTax] = useState(initTax.toFixed(2))
   const [tip, setTip] = useState(initTip.toFixed(2))
   const [label, setLabel] = useState(initLabel ?? '')
+  const [currency, setCurrency] = useState(normalizeCurrency(initCurrency) ?? DEFAULT_CURRENCY)
 
   // Total is always derived — no editable state, so tip/tax/items can never diverge from total
   const itemsSum = items.reduce((sum, i) => sum + (parseFloat(i.priceStr) || 0), 0)
@@ -100,12 +115,21 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
     }
   }
 
+  function currentResult(onlyComplete = true): ReviewResult {
+    const rows = onlyComplete ? items.filter(isComplete) : items
+    return {
+      items: rows.map(i => ({ id: i.id, name: i.name, price: parseFloat(i.priceStr), assignedTo: i.assignedTo, confidence: i.confidence })),
+      tax: Math.max(0, parseFloat(tax) || 0),
+      tip: Math.max(0, parseFloat(tip) || 0),
+      total: computedTotal,
+      label: label.trim() || undefined,
+      currency,
+    }
+  }
+
   function handleDone() {
     if (!canContinue) return
-    const validItems: Item[] = items
-      .filter(isComplete)
-      .map(i => ({ id: i.id, name: i.name, price: parseFloat(i.priceStr), assignedTo: i.assignedTo, confidence: i.confidence }))
-    onDone(validItems, Math.max(0, parseFloat(tax) || 0), Math.max(0, parseFloat(tip) || 0), computedTotal, label.trim() || undefined)
+    onDone(currentResult())
   }
 
   // A half-filled row means the scan missed something. Silently dropping it
@@ -127,16 +151,9 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
   // Keep the parent's draft in step with what's typed, so a refresh keeps it
   useEffect(() => {
-    onEditRef.current?.(
-      items.filter(isComplete).map(i => ({
-        id: i.id, name: i.name, price: parseFloat(i.priceStr), assignedTo: i.assignedTo, confidence: i.confidence,
-      })),
-      Math.max(0, parseFloat(tax) || 0),
-      Math.max(0, parseFloat(tip) || 0),
-      computedTotal,
-      label.trim() || undefined,
-    )
-  }, [items, tax, tip, computedTotal, label])
+    onEditRef.current?.(currentResult())
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- currentResult reads exactly these
+  }, [items, tax, tip, computedTotal, label, currency])
 
   return (
     <div>
@@ -183,7 +200,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
               data-review-input
             />
             <div className="flex items-center gap-1 shrink-0 w-24">
-              <span className="text-text-secondary text-sm shrink-0">$</span>
+              <span className="text-text-secondary text-sm shrink-0">{currencySymbol(currency)}</span>
               <Input
                 className="text-right min-w-0"
                 type="text"
@@ -231,7 +248,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2 mb-8">
+      <div className="grid grid-cols-3 gap-2 mb-3">
         {([
           { label: 'Tax', content: <Input type="text" inputMode="decimal" value={tax} onChange={e => setTax(e.target.value)} onBlur={() => setTax(formatCurrency(tax))} onKeyDown={e => { if (e.key === 'Enter') focusNextReviewInput(e.currentTarget) }} className="text-right" data-review-input /> },
           { label: 'Tip', content: <Input type="text" inputMode="decimal" value={tip} onChange={e => setTip(e.target.value)} onBlur={() => setTip(formatCurrency(tip))} onKeyDown={e => { if (e.key === 'Enter') setTip(formatCurrency(tip)) }} className="text-right" data-review-input /> },
@@ -239,15 +256,29 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
         ] as const).map(({ label, content }) => (
           <div key={label}>
             <div className="flex items-center gap-1 mb-1">
-              <span className="text-sm invisible" aria-hidden="true">$</span>
+              <span className="text-sm invisible" aria-hidden="true">{currencySymbol(currency)}</span>
               <label className="text-text-secondary text-xs uppercase tracking-wider">{label}</label>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-text-secondary text-sm">$</span>
+              <span className="text-text-secondary text-sm">{currencySymbol(currency)}</span>
               {content}
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="flex items-center justify-end gap-2 mb-8">
+        <label htmlFor="currency" className="text-text-secondary/60 text-xs uppercase tracking-wider">Currency</label>
+        <select
+          id="currency"
+          value={currency}
+          onChange={e => setCurrency(e.target.value)}
+          className="bg-surface border border-border rounded-lg px-2 py-1 text-sm text-text-primary outline-none focus:border-gold"
+        >
+          {[...new Set([currency, ...CURRENCIES])].map(code => (
+            <option key={code} value={code}>{code}</option>
+          ))}
+        </select>
       </div>
 
     </div>

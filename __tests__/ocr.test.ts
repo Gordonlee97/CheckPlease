@@ -79,14 +79,14 @@ describe('parseAzureResponse', () => {
 describe('ClaudeReceiptSchema', () => {
   it('accepts a null label', () => {
     const parsed = ClaudeReceiptSchema.safeParse({
-      label: null, items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 1.2, tip: 0, total: 13.2,
+      label: null, currency: 'USD', items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 1.2, tip: 0, total: 13.2,
     })
     expect(parsed.success).toBe(true)
   })
 
   it('rejects items without a numeric price', () => {
     const parsed = ClaudeReceiptSchema.safeParse({
-      label: 'X', items: [{ name: 'Tacos', price: '12' }], subtotal: 12, tax: 0, tip: 0, total: 12,
+      label: 'X', currency: 'USD', items: [{ name: 'Tacos', price: '12' }], subtotal: 12, tax: 0, tip: 0, total: 12,
     })
     expect(parsed.success).toBe(false)
   })
@@ -95,21 +95,45 @@ describe('ClaudeReceiptSchema', () => {
 describe('claudeReceiptToScanResult', () => {
   it('maps a parsed receipt to a ScanResult', () => {
     const result = claudeReceiptToScanResult({
-      label: 'Taco House', items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 1.2, tip: 0, total: 13.2,
+      label: 'Taco House', currency: 'USD', items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 1.2, tip: 0, total: 13.2,
     })
     expect(result).toEqual({
-      label: 'Taco House', items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 1.2, tip: 0, total: 13.2,
+      label: 'Taco House', currency: 'USD', items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 1.2, tip: 0, total: 13.2,
     })
   })
 
   it('turns a null label into undefined', () => {
     const result = claudeReceiptToScanResult({
-      label: null, items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 0, tip: 0, total: 12,
+      label: null, currency: null, items: [{ name: 'Tacos', price: 12 }], subtotal: 12, tax: 0, tip: 0, total: 12,
     })
     expect(result!.label).toBeUndefined()
   })
 
   it('returns null when there is no parsed output', () => {
     expect(claudeReceiptToScanResult(null)).toBeNull()
+  })
+})
+
+describe('currency', () => {
+  it('reads the currency code Azure attaches to the total', () => {
+    const withCurrency = {
+      status: 'succeeded',
+      analyzeResult: { documents: [{ fields: {
+        Items: { valueArray: [{ valueObject: { Description: { valueString: 'Kaffee' }, TotalPrice: { valueCurrency: { amount: 4 } } } }] },
+        Total: { valueCurrency: { amount: 4, currencyCode: 'EUR' } },
+      } }] },
+    }
+    expect(parseAzureResponse(withCurrency)?.currency).toBe('EUR')
+  })
+
+  it('leaves currency unset when Azure does not say', () => {
+    expect(parseAzureResponse(azureNoTip)?.currency).toBeUndefined()
+  })
+
+  it('ignores a nonsense currency from Claude', () => {
+    const result = claudeReceiptToScanResult({
+      label: 'X', currency: 'dollars', items: [{ name: 'A', price: 1 }], subtotal: 1, tax: 0, tip: 0, total: 1,
+    })
+    expect(result?.currency).toBeUndefined()
   })
 })

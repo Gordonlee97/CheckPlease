@@ -52,7 +52,7 @@ A new split has five steps. A progress bar at the top lets you go back to earlie
 |---|---|
 | **1. Who's splitting?** | Add everyone at the table (at least 2 people). Names you've used before appear as suggestions. You can also load a saved group, add optional Venmo handles, or save this table as a new group. |
 | **2. Scan receipt** | Take a photo of the receipt, or choose one from your gallery. The app reads it in a few seconds. No receipt, or the scan can't read it? Tap **Enter items manually** and type the items yourself. |
-| **3. Review items** | Check the items, prices, restaurant name, tax, and tip. Items marked ⚠ were hard to read, so double-check those. Fix anything that's wrong, remove extra lines, or add missing items. The total updates as you edit. An item the scan couldn't price is outlined in red — type the price or delete the row, since you can't continue while one is unfinished. |
+| **3. Review items** | Check the items, prices, restaurant name, tax, tip, and currency (read from the receipt; correct it with the selector if it's wrong). Items marked ⚠ were hard to read, so double-check those. Fix anything that's wrong, remove extra lines, or add missing items. The total updates as you edit. An item the scan couldn't price is outlined in red — type the price or delete the row, since you can't continue while one is unfinished. |
 | **4. Assign items** | Tap a person's name under each item to assign it to them. Tap several names for a shared item, or **All** for something everyone shared. **Split equally between everyone** assigns every item to the whole table. You can't continue until every item is assigned. Unassigned items are outlined in red. |
 | **5. Totals** | See each person's total and what's in it. Tap **Share link** or **Copy text** to send results, or **Request on Venmo** next to a person. Tap **Done** to save the split to your history. |
 
@@ -91,7 +91,7 @@ Yes. On the Scan step, tap **Enter items manually** and type each item and price
 Yes. It runs in your phone's browser. You can also use **Add to Home Screen** so it opens like an app.
 
 **Does it support currencies other than US dollars?**
-Amounts are shown in dollars. Receipts in other currencies will still split correctly, but they'll display with a `$` sign.
+Yes. The currency is read from the receipt and you can correct it on the Review step. Amounts then display in that currency everywhere, including the shared link and copied text. "Request on Venmo" is hidden outside US dollars, since Venmo is US-only.
 
 **Can I delete a past split?**
 Yes. Open the split from the home screen or All Splits, then tap **Delete split** at the bottom and confirm. It's gone for good — there's no undo and no backup. Saved groups are deleted the same way, from the group's edit screen.
@@ -117,6 +117,7 @@ The button opens the Venmo app, so it only works on a phone with Venmo installed
 | Rate limiting | [`@upstash/ratelimit`](https://github.com/upstash/ratelimit-js) + Upstash Redis on `/api/scan` |
 | Local persistence | IndexedDB via [`idb`](https://github.com/jakearchibald/idb) for split history; `localStorage` for groups, names, settings, and the in-progress draft |
 | Share links | [`lz-string`](https://github.com/pieroxy/lz-string) compression in the URL hash |
+| Money formatting | `Intl.NumberFormat` pinned to `en-US`, currency per split (`src/lib/money.ts`) |
 | Install on a phone | PWA: web manifest + `apple-icon.png`, added to the home screen. No native wrapper. |
 | Tests | Jest + ts-jest, jsdom for component tests, `fake-indexeddb` for the storage layer |
 | Hosting | Vercel |
@@ -205,6 +206,8 @@ src/
     ├── savedNames.ts         # localStorage: name autocomplete
     ├── userSettings.ts       # localStorage: your Venmo handle
     ├── rateLimit.ts          # Per-IP scan limit (server)
+    ├── scanErrors.ts         # Maps API failures to messages users can act on
+    ├── money.ts              # Currency formatting and validation
     ├── imageUtils.ts         # Client-side image resize → base64
     └── personColors.ts       # Per-person color palette
 __tests__/                    # Jest tests: splitting, OCR, sharing, storage, draft, steps
@@ -232,7 +235,8 @@ flowchart LR
 2. The route checks the per-IP rate limit (`src/lib/rateLimit.ts`, 10 scans/hour, sliding window) before reading the body, and returns `429` with `Retry-After` when it's exceeded.
 3. It submits the image to Azure's `prebuilt-receipt` model and polls the operation with exponential backoff (up to about 20 polls).
 4. If Azure isn't configured, fails, or returns fewer than 2 items, the route sends the image to Claude Opus 5. A Zod schema passed as `output_config.format` constrains the reply, so no JSON is parsed out of free text. Server-side refusal fallbacks are enabled; a refusal that survives them is treated as an unreadable receipt.
-5. The response is a `ScanResult`: `{ label, items[{ name, price, confidence? }], subtotal, tax, tip, total }`. The route returns `422` if neither service can read the receipt.
+5. When Azure succeeds but flags any item below 0.8 confidence, Claude re-reads the same photo and its price is used for those items only (`reconcileLowConfidence`). Agreement clears the ⚠; disagreement keeps it. A failure here is logged and Azure's result still stands.
+6. The response is a `ScanResult`: `{ label, items[{ name, price, confidence? }], subtotal, tax, tip, total }`. The route returns `422` if neither service can read the receipt.
 
 API keys stay on the server. CORS is limited to an allowlist in `route.ts` (localhost, `capacitor://localhost`, and the production domain).
 
@@ -299,6 +303,5 @@ If App Store or Play listings are wanted later, the pieces needed are: `output: 
 ## Known limitations
 
 - **One draft at a time.** Starting a new split replaces the saved one (after a confirm), and the receipt photo isn't part of the draft.
-- **USD formatting only.**
 - **Receipt discounts and service charges** aren't treated specially. They come through as whatever the OCR returns, so check them on the Review step.
 - **The scan endpoint has no authentication**, only a per-IP rate limit and a CORS allowlist. Browsers honour CORS; `curl` doesn't. Anyone who finds the URL can send it up to 10 images an hour per IP, spending your Azure and Anthropic credits. Spending caps in those consoles are the backstop.

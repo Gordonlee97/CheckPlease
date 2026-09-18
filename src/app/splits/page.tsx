@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { listSessions } from '@/lib/storage'
 import type { Session } from '@/lib/types'
 import { Card } from '@/components/ui/Card'
+import { formatMoney } from '@/lib/money'
 import Link from 'next/link'
 
 const PAGE_SIZE = 20
@@ -49,7 +50,7 @@ export default function SplitsPage() {
                       {new Date(session.createdAt).toLocaleDateString()} · {session.people.length} people
                     </p>
                   </div>
-                  <span className="text-gold text-sm">${session.total.toFixed(2)}</span>
+                  <span className="text-gold text-sm">{formatMoney(session.total, session.currency)}</span>
                 </Card>
               </Link>
             ))}

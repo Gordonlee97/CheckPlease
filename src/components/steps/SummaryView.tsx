@@ -5,6 +5,7 @@ import type { Session } from '@/lib/types'
 import type { PersonShare } from '@/lib/splitting'
 import { useShareActions } from '@/hooks/useShareActions'
 import { Button } from '@/components/ui/Button'
+import { formatMoney, DEFAULT_CURRENCY, normalizeCurrency } from '@/lib/money'
 
 interface Props {
   session: Session
@@ -63,7 +64,7 @@ function ShareCard({ share, index, session }: ShareCardProps) {
           {share.name}
         </span>
         <span className="text-gold font-bold text-xl tabular-nums">
-          ${animatedTotal.toFixed(2)}
+          {formatMoney(animatedTotal, session.currency)}
         </span>
       </div>
       <div className="space-y-1">
@@ -72,16 +73,19 @@ function ShareCard({ share, index, session }: ShareCardProps) {
         </p>
         <div className="flex items-center justify-between pt-1 border-t border-border">
           <p className="text-[11px] text-text-secondary/50">
-            Items ${share.itemSubtotal.toFixed(2)}
-            {session.tax > 0 && ` · Tax $${share.taxShare.toFixed(2)}`}
-            {session.tip > 0 && ` · Tip $${share.tipShare.toFixed(2)}`}
+            Items {formatMoney(share.itemSubtotal, session.currency)}
+            {session.tax > 0 && ` · Tax ${formatMoney(share.taxShare, session.currency)}`}
+            {session.tip > 0 && ` · Tip ${formatMoney(share.tipShare, session.currency)}`}
           </p>
-          <button
-            onClick={() => window.open(venmoUrl, '_system')}
-            className="text-[11px] text-[#008CFF]/70 hover:text-[#008CFF] transition-colors shrink-0 ml-3"
-          >
-            Request on Venmo
-          </button>
+          {/* Venmo is USD-only; the deep link would be misleading otherwise */}
+          {(normalizeCurrency(session.currency) ?? DEFAULT_CURRENCY) === DEFAULT_CURRENCY && (
+            <button
+              onClick={() => window.open(venmoUrl, '_system')}
+              className="text-[11px] text-[#008CFF]/70 hover:text-[#008CFF] transition-colors shrink-0 ml-3"
+            >
+              Request on Venmo
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -103,7 +107,7 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
         {session.label ?? 'Unknown Restaurant'}
       </h2>
       <p className="text-text-secondary text-sm mb-6">
-        {new Date(session.createdAt).toLocaleDateString()} · {session.people.length} people · ${session.total.toFixed(2)} total
+        {new Date(session.createdAt).toLocaleDateString()} · {session.people.length} people · {formatMoney(session.total, session.currency)} total
       </p>
 
       <div className="flex flex-col gap-3 mb-4">

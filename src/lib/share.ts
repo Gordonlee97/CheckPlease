@@ -1,6 +1,7 @@
 import LZString from 'lz-string'
 import type { Session } from './types'
 import type { PersonShare } from './splitting'
+import { formatMoney } from './money'
 
 export function buildVenmoRequestAllUrl(
   session: Session,
@@ -47,7 +48,7 @@ export function buildShareUrl(session: Session): string {
 
 export function buildPlainText(session: Session, shares: PersonShare[], myVenmoHandle?: string): string {
   const date = new Date(session.createdAt).toLocaleDateString()
-  const header = `CheckPlease — ${session.label ?? 'Dinner'} · ${date} · ${session.people.length} people · $${session.total.toFixed(2)} total`
+  const header = `CheckPlease — ${session.label ?? 'Dinner'} · ${date} · ${session.people.length} people · ${formatMoney(session.total, session.currency)} total`
 
   const personBlocks = shares.map(share => {
     const itemNames = share.assignedItems
@@ -55,16 +56,16 @@ export function buildPlainText(session: Session, shares: PersonShare[], myVenmoH
       .join(' · ')
 
     const breakdown = [
-      `Items $${share.itemSubtotal.toFixed(2)}`,
-      `Tax $${share.taxShare.toFixed(2)}`,
-      share.tipShare > 0 && `Tip $${share.tipShare.toFixed(2)}`,
+      `Items ${formatMoney(share.itemSubtotal, session.currency)}`,
+      `Tax ${formatMoney(share.taxShare, session.currency)}`,
+      share.tipShare > 0 && `Tip ${formatMoney(share.tipShare, session.currency)}`,
     ].filter(Boolean).join(' · ')
 
     return [
       share.name,
       itemNames,
       breakdown,
-      `You owe: $${share.total.toFixed(2)}`,
+      `You owe: ${formatMoney(share.total, session.currency)}`,
     ].join('\n')
   })
 

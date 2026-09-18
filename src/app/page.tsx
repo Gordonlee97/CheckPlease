@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { listSessions } from '@/lib/storage'
 import { useSavedGroups } from '@/lib/savedGroups'
 import { useDraft } from '@/lib/draft'
+import { formatMoney } from '@/lib/money'
 import { useMyVenmoHandle, setMyVenmoHandle } from '@/lib/userSettings'
 import type { Session } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
@@ -163,7 +164,7 @@ export default function Home() {
                         {new Date(session.createdAt).toLocaleDateString()} · {session.people.length} people
                       </p>
                     </div>
-                    <span className="text-gold text-sm">${session.total.toFixed(2)}</span>
+                    <span className="text-gold text-sm">{formatMoney(session.total, session.currency)}</span>
                   </Card>
                 </Link>
               ))}
