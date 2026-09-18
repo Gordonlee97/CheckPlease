@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { parseAzureResponse, ClaudeReceiptSchema, claudeReceiptToScanResult } from '@/lib/ocr'
 import { createScanLimiter, getClientIp, checkRateLimit } from '@/lib/rateLimit'
+import { describeScanFailure } from '@/lib/scanErrors'
 import type { ScanResult } from '@/lib/types'
 
 export const maxDuration = 60
@@ -118,7 +119,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400, headers })
     }
 
-    let result = await analyzeWithAzure(base64Image)
+    // Azure problems must never end the request — Claude is the fallback.
+    // A Claude failure does propagate, so the catch below can explain it.
+    let result: ScanResult | null = null
+    try {
+      result = await analyzeWithAzure(base64Image)
+    } catch (err) {
+      console.error('[scan] azure failed, falling back to Claude:', err)
+    }
     if (!result || result.items.length < 2) {
       result = await analyzeWithClaude(base64Image)
     }
@@ -128,7 +136,10 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(result, { headers })
-  } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers })
+  } catch (err) {
+    // Logged in full for Vercel; the client gets something a diner can act on
+    console.error('[scan] failed:', err)
+    const failure = describeScanFailure(err)
+    return NextResponse.json({ error: failure.error }, { status: failure.status, headers })
   }
 }
