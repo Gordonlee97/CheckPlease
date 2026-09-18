@@ -59,6 +59,40 @@ export const ClaudeReceiptSchema = z.object({
 
 export type ClaudeReceipt = z.infer<typeof ClaudeReceiptSchema>
 
+// Azure reports per-item confidence; below this the price is worth a second look.
+export const LOW_CONFIDENCE = 0.8
+
+function normalizeName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+// Azure is the primary reader but sometimes misreads an amount. When it flags
+// low confidence, Claude re-reads the same photo and its price wins for those
+// items only — everything Azure was sure about is left untouched.
+export function reconcileLowConfidence(azure: ScanResult, claude: ScanResult): ScanResult {
+  const byName = new Map(claude.items.map(item => [normalizeName(item.name), item]))
+
+  const items = azure.items.map(item => {
+    if (item.confidence === undefined || item.confidence >= LOW_CONFIDENCE) return item
+
+    const match = byName.get(normalizeName(item.name))
+    if (!match) return item // nothing to compare against; leave the warning up
+
+    // Agreement from two readers is as good as a confident read
+    if (Math.abs(match.price - item.price) < 0.01) {
+      return { ...item, price: item.price, confidence: undefined }
+    }
+    // They disagree: trust Claude's price, but keep the warning so it gets checked
+    return { ...item, price: match.price }
+  })
+
+  return { ...azure, items, label: azure.label ?? claude.label }
+}
+
+export function hasLowConfidenceItem(result: ScanResult): boolean {
+  return result.items.some(i => i.confidence !== undefined && i.confidence < LOW_CONFIDENCE)
+}
+
 export function claudeReceiptToScanResult(receipt: ClaudeReceipt | null): ScanResult | null {
   if (!receipt) return null
   return { ...receipt, label: receipt.label ?? undefined }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
-import { parseAzureResponse, ClaudeReceiptSchema, claudeReceiptToScanResult } from '@/lib/ocr'
+import { parseAzureResponse, ClaudeReceiptSchema, claudeReceiptToScanResult, hasLowConfidenceItem, reconcileLowConfidence } from '@/lib/ocr'
 import { createScanLimiter, getClientIp, checkRateLimit } from '@/lib/rateLimit'
 import { describeScanFailure } from '@/lib/scanErrors'
 import type { ScanResult } from '@/lib/types'
@@ -129,6 +129,16 @@ export async function POST(req: NextRequest) {
     }
     if (!result || result.items.length < 2) {
       result = await analyzeWithClaude(base64Image)
+    } else if (hasLowConfidenceItem(result)) {
+      // Azure misread at least one amount. Have Claude re-read the same photo
+      // and take its price for those items only. A failure here is not fatal:
+      // Azure's result still stands, with its warnings intact.
+      try {
+        const second = await analyzeWithClaude(base64Image)
+        if (second) result = reconcileLowConfidence(result, second)
+      } catch (err) {
+        console.error('[scan] low-confidence recheck failed, keeping Azure result:', err)
+      }
     }
 
     if (!result) {

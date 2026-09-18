@@ -30,14 +30,14 @@ import { checkRateLimit } from '@/lib/rateLimit'
 
 const AZURE_ENV = { AZURE_DI_ENDPOINT: 'https://example.cognitiveservices.azure.com', AZURE_DI_KEY: 'key' }
 
-function azureDoc(items: Array<[string, number]>) {
+function azureDoc(items: Array<[string, number, number?]>) {
   return {
     status: 'succeeded',
     analyzeResult: {
       documents: [{
         fields: {
           MerchantName: { valueString: 'Azure Diner' },
-          Items: { valueArray: items.map(([name, price]) => ({ valueObject: { Description: { valueString: name }, TotalPrice: { valueCurrency: { amount: price } } } })) },
+          Items: { valueArray: items.map(([name, price, confidence]) => ({ valueObject: { Description: { valueString: name }, TotalPrice: { valueCurrency: { amount: price }, confidence } } })) },
           SubTotal: { valueCurrency: { amount: 30 } },
           TotalTax: { valueCurrency: { amount: 3 } },
           Total: { valueCurrency: { amount: 33 } },
@@ -178,5 +178,41 @@ describe('POST /api/scan', () => {
     global.fetch = azureFetch(azureDoc([['Tacos', 12], ['Burrito', 18]])) as unknown as typeof fetch
     const blocked = await post(scanRequest(undefined, 'https://evil.example'))
     expect(blocked.headers.get('Access-Control-Allow-Origin')).toBe('')
+  })
+
+  describe('low-confidence recheck', () => {
+    const shaky = () => azureDoc([['Tacos', 12, 0.99], ['Burrito', 2, 0.3]])
+
+    it('asks Claude again and takes its price for the shaky item only', async () => {
+      global.fetch = azureFetch(shaky()) as unknown as typeof fetch
+      parse.mockResolvedValue({
+        stop_reason: 'end_turn',
+        parsed_output: { label: 'Azure Diner', items: [{ name: 'Tacos', price: 12 }, { name: 'Burrito', price: 20 }], subtotal: 32, tax: 3, tip: 0, total: 35 },
+      })
+
+      const body = await (await post(scanRequest())).json()
+
+      expect(parse).toHaveBeenCalledTimes(1)
+      expect(body.items.map((i: { name: string; price: number }) => [i.name, i.price])).toEqual([['Tacos', 12], ['Burrito', 20]])
+    })
+
+    it('does not ask again when Azure is confident throughout', async () => {
+      global.fetch = azureFetch(azureDoc([['Tacos', 12, 0.99], ['Burrito', 18, 0.95]])) as unknown as typeof fetch
+
+      await post(scanRequest())
+
+      expect(parse).not.toHaveBeenCalled()
+    })
+
+    it('keeps the Azure result when the recheck fails', async () => {
+      global.fetch = azureFetch(shaky()) as unknown as typeof fetch
+      parse.mockRejectedValue(new Error('claude down'))
+
+      const res = await post(scanRequest())
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.items.map((i: { price: number }) => i.price)).toEqual([12, 2])
+    })
   })
 })
