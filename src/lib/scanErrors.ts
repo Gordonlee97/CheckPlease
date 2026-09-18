@@ -1,5 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk'
-import type { APIError } from '@anthropic-ai/sdk'
+// Named import: Anthropic.APIError exists on the ESM default export but not
+// the CommonJS one, so `instanceof` off the default is format-dependent.
+import { APIError } from '@anthropic-ai/sdk'
 
 export interface ScanFailure {
   status: number
@@ -25,7 +26,7 @@ function isSpendLimit(err: APIError): boolean {
 }
 
 export function describeScanFailure(err: unknown): ScanFailure {
-  if (err instanceof Anthropic.APIError) {
+  if (err instanceof APIError) {
     if (isSpendLimit(err)) return { status: 503, error: UNAVAILABLE }
     if (err.status === 429) return { status: 503, error: BUSY }
     // Bad or missing credentials are ours to fix; don't describe them to users

@@ -1,8 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { APIError } from '@anthropic-ai/sdk'
 import { describeScanFailure } from '../src/lib/scanErrors'
 
 function apiError(status: number, body: object, message: string) {
-  return Anthropic.APIError.generate(status, body, message, new Headers())
+  return APIError.generate(status, body, message, new Headers())
 }
 
 describe('describeScanFailure', () => {
