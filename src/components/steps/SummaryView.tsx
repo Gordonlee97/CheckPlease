@@ -6,6 +6,8 @@ import type { PersonShare } from '@/lib/splitting'
 import { useShareActions } from '@/hooks/useShareActions'
 import { Button } from '@/components/ui/Button'
 import { formatMoney, DEFAULT_CURRENCY, normalizeCurrency } from '@/lib/money'
+import { buildShareUrl } from '@/lib/share'
+import { buildQrImage, type QrImage } from '@/lib/qr'
 
 interface Props {
   session: Session
@@ -94,6 +96,15 @@ function ShareCard({ share, index, session }: ShareCardProps) {
 
 export function SummaryView({ session, shares, readOnly = false, onDone, ref, onReadyChange }: Props) {
   const { toast, sharing, shareLink, copyText } = useShareActions(session, shares)
+  const [qr, setQr] = useState<{ image: QrImage | null } | null>(null)
+  const [buildingQr, setBuildingQr] = useState(false)
+
+  async function toggleQr() {
+    if (qr) { setQr(null); return }
+    setBuildingQr(true)
+    setQr({ image: await buildQrImage(buildShareUrl(session)) })
+    setBuildingQr(false)
+  }
   // No deps: rebuilt each render so submit() always sees the current onDone
   useImperativeHandle(ref, () => ({ submit: () => onDone?.() }))
 
@@ -113,6 +124,37 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
       <div className="flex flex-col gap-3 mb-4">
         {shares.map((share, idx) => (
           <ShareCard key={share.personId} share={share} index={idx} session={session} />
+        ))}
+      </div>
+
+      {/* Scan-at-the-table alternative to messaging everyone the link */}
+      <div className="flex flex-col items-center gap-3 mb-8">
+        <button
+          onClick={toggleQr}
+          disabled={buildingQr}
+          className="text-text-secondary/60 text-xs hover:text-text-secondary transition-colors disabled:opacity-50"
+        >
+          {qr ? 'Hide QR code' : buildingQr ? 'Making QR code…' : 'Show QR code'}
+        </button>
+
+        {qr && (qr.image ? (
+          <div className="flex flex-col items-center gap-2 animate-fade-in">
+            {/* Rendered 1:1 — CSS scaling smooths module edges and stops dense
+                codes from scanning (checked by decoding screenshots). */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- generated data: URI; next/image can't optimize it */}
+            <img
+              src={qr.image.dataUrl}
+              alt="QR code linking to this split"
+              className="rounded-xl max-w-full"
+              width={qr.image.size}
+              height={qr.image.size}
+            />
+            <p className="text-text-secondary/60 text-xs">Point a camera at this to open the split</p>
+          </div>
+        ) : (
+          <p className="text-text-secondary/60 text-xs text-center animate-fade-in">
+            This split has too many items for a QR code — use Share link instead.
+          </p>
         ))}
       </div>
 
