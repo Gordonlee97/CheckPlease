@@ -54,7 +54,7 @@ A new split has five steps. A progress bar at the top lets you go back to earlie
 | **2. Scan receipt** | Take a photo of the receipt, or choose one from your gallery. The app reads it in a few seconds. No receipt, or the scan can't read it? Tap **Enter items manually** and type the items yourself. |
 | **3. Review items** | Check the items, prices, restaurant name, tax, tip, and currency (read from the receipt; correct it with the selector if it's wrong). Items marked ⚠ were hard to read, so double-check those. Fix anything that's wrong, remove extra lines, or add missing items. The total updates as you edit. An item the scan couldn't price is outlined in red — type the price or delete the row, since you can't continue while one is unfinished. |
 | **4. Assign items** | Tap a person's name under each item to assign it to them. Tap several names for a shared item, or **All** for something everyone shared. **Split equally between everyone** assigns every item to the whole table. You can't continue until every item is assigned. Unassigned items are outlined in red. |
-| **5. Totals** | See each person's total and what's in it. Tap **Share link** or **Copy text** to send results, or **Request on Venmo** next to a person. Tap **Done** to save the split to your history. |
+| **5. Totals** | See each person's total and what's in it. Tap **Share link** or **Copy text** to send results, **Show QR code** to let people at the table scan it, or **Request on Venmo** next to a person. Tap **Done** to save the split to your history. |
 
 **Tip:** Tap **Add your Venmo** at the top of the home screen to save your own handle. It's added to the end of the copied text so people know where to pay you.
 
@@ -116,7 +116,7 @@ The button opens the Venmo app, so it only works on a phone with Venmo installed
 | Receipt OCR (fallback) | Claude Opus 5 vision + structured outputs via `@anthropic-ai/sdk` |
 | Rate limiting | [`@upstash/ratelimit`](https://github.com/upstash/ratelimit-js) + Upstash Redis on `/api/scan` |
 | Local persistence | IndexedDB via [`idb`](https://github.com/jakearchibald/idb) for split history; `localStorage` for groups, names, settings, and the in-progress draft |
-| Share links | [`lz-string`](https://github.com/pieroxy/lz-string) compression in the URL hash |
+| Share links | [`lz-string`](https://github.com/pieroxy/lz-string) compression in the URL hash; [`qrcode`](https://github.com/soldair/node-qrcode) renders the same link as a QR |
 | Money formatting | `Intl.NumberFormat` pinned to `en-US`, currency per split (`src/lib/money.ts`) |
 | Install on a phone | PWA: web manifest + `apple-icon.png`, added to the home screen. No native wrapper. |
 | Tests | Jest + ts-jest, jsdom for component tests, `fake-indexeddb` for the storage layer |
@@ -208,6 +208,7 @@ src/
     ├── rateLimit.ts          # Per-IP scan limit (server)
     ├── scanErrors.ts         # Maps API failures to messages users can act on
     ├── money.ts              # Currency formatting and validation
+    ├── qr.ts                 # Share link as a scannable QR code
     ├── imageUtils.ts         # Client-side image resize → base64
     └── personColors.ts       # Per-person color palette
 __tests__/                    # Jest tests: splitting, OCR, sharing, storage, draft, steps
@@ -263,6 +264,7 @@ The denominator is the sum of item prices after the user's edits, not the subtot
 
 - **Link:** The whole `Session` is serialized to JSON, compressed with `lz-string`, and placed after `#` in `/share#<payload>`. The hash never reaches the server, and the share page recomputes the split on the client. Links never expire because nothing is stored anywhere.
 - **Text:** `buildPlainText()` produces a chat-friendly summary.
+- **QR:** `buildQrImage()` encodes the same link for scanning at the table. It returns the image's natural size and the summary renders it 1:1 — CSS-scaling a QR smooths module edges and stops dense codes from scanning. Links over 2000 characters (very long receipts) get a "use Share link instead" message rather than an unscannable code.
 - **Venmo:** Each person's card links to `venmo://paycharge?txn=charge&recipients=<handle>&amount=<total>&note=<restaurant>`. A combined "request everyone at once" link was removed because Venmo deep links don't support multiple amounts.
 
 ## Testing
