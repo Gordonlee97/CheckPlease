@@ -101,14 +101,14 @@ function GroupEditorContent() {
           <div className="flex items-center gap-2">
             <span className="text-text-secondary text-xs">Are you sure?</span>
             <button onClick={handleDelete} className="text-red-400 text-sm font-medium">Delete</button>
-            <button onClick={() => setConfirmDelete(false)} className="text-text-secondary/40 text-sm">Cancel</button>
+            <button onClick={() => setConfirmDelete(false)} className="text-text-secondary text-sm">Cancel</button>
           </div>
         )}
       </div>
 
-      <h2 className="font-display text-4xl tracking-wide text-gold mb-6">
+      <h1 className="font-display text-4xl tracking-wide text-gold mb-6">
         {isNew ? 'New Group' : 'Edit Group'}
-      </h2>
+      </h1>
 
       <div className="mb-6">
         <p className="text-text-secondary text-xs uppercase tracking-widest mb-2">Group name</p>
@@ -149,13 +149,13 @@ function GroupEditorContent() {
               </button>
             </div>
             <div className="flex items-center gap-2 pl-5">
-              <span className="text-text-secondary/50 text-sm">@</span>
+              <span className="text-text-secondary text-sm">@</span>
               <input
                 type="text"
                 placeholder="venmo handle (optional)"
                 value={person.venmoHandle ?? ''}
                 onChange={e => updateVenmo(person.key, e.target.value)}
-                className="flex-1 bg-transparent text-sm text-text-secondary placeholder:text-text-secondary/30 outline-none border-b border-border/40 pb-0.5 focus:border-gold/50 transition-colors"
+                className="flex-1 bg-transparent text-sm text-text-secondary placeholder:text-text-secondary outline-none border-b border-border/40 pb-0.5 focus:border-gold/50 transition-colors"
               />
             </div>
           </Card>

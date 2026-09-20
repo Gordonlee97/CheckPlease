@@ -87,6 +87,12 @@ That happens, especially with crumpled receipts, bad lighting, or handwritten ti
 **Can I use it without a receipt?**
 Yes. On the Scan step, tap **Enter items manually** and type each item and price. The rest of the split works the same.
 
+**Does it read receipts in other languages?**
+Yes. The scanner supports around 115 languages, so a receipt in Spanish, Japanese, Arabic or Hebrew reads fine and item names come through as printed. The app's own buttons and labels are English only.
+
+**Does it work with a screen reader or keyboard?**
+Yes. Every control is reachable by keyboard, fields are labelled, and status changes (scan progress, "1 item needs a price", "Copied to clipboard") are announced. Errors are never signalled by colour alone.
+
 **Does it work on iPhone and Android?**
 Yes. It runs in your phone's browser. You can also use **Add to Home Screen** so it opens like an app.
 
@@ -118,6 +124,7 @@ The button opens the Venmo app, so it only works on a phone with Venmo installed
 | Local persistence | IndexedDB via [`idb`](https://github.com/jakearchibald/idb) for split history; `localStorage` for groups, names, settings, and the in-progress draft |
 | Share links | [`lz-string`](https://github.com/pieroxy/lz-string) compression in the URL hash; [`qrcode`](https://github.com/soldair/node-qrcode) renders the same link as a QR |
 | Money formatting | `Intl.NumberFormat` pinned to `en-US`, currency per split (`src/lib/money.ts`) |
+| Accessibility | WCAG 2.1 AA: labelled controls, `role="status"` live regions, `aria-pressed` toggles, `aria-invalid` on bad fields; axe-core clean on every screen |
 | Install on a phone | PWA: web manifest + `apple-icon.png`, added to the home screen. No native wrapper. |
 | Tests | Jest + ts-jest, jsdom for component tests, `fake-indexeddb` for the storage layer |
 | Hosting | Vercel |

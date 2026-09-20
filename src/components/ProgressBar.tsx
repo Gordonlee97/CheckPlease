@@ -24,7 +24,7 @@ export function ProgressBar({ current, completed, onNavigate }: Props) {
   const currentIdx = STEP_ORDER.indexOf(current)
 
   return (
-    <div className="flex items-center mb-6">
+    <nav aria-label="Split progress" className="flex items-center mb-6">
       {STEPS.map((step, idx) => {
         const isDone = completed.has(step.key)
         const isCurrent = step.key === current
@@ -35,6 +35,8 @@ export function ProgressBar({ current, completed, onNavigate }: Props) {
             <button
               onClick={() => isDone && onNavigate(step.key)}
               disabled={!isDone}
+              aria-current={isCurrent ? 'step' : undefined}
+              aria-label={`Step ${idx + 1} of ${STEPS.length}: ${step.label}${isCurrent ? ' (current)' : isDone ? ' (done)' : ' (not reached yet)'}`}
               className="flex flex-col items-center gap-1.5 shrink-0"
             >
               <div className="w-3.5 h-3.5 flex items-center justify-center">
@@ -48,8 +50,7 @@ export function ProgressBar({ current, completed, onNavigate }: Props) {
               <span className={cn(
                 'text-[11px] uppercase tracking-wider leading-none select-none whitespace-nowrap',
                 isCurrent ? 'text-gold' :
-                isDone    ? 'text-text-secondary' :
-                            'text-border'
+                            'text-text-secondary'
               )}>
                 {step.label}
               </span>
@@ -65,6 +66,6 @@ export function ProgressBar({ current, completed, onNavigate }: Props) {
           </Fragment>
         )
       })}
-    </div>
+    </nav>
   )
 }

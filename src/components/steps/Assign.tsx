@@ -79,13 +79,14 @@ export function Assign({ people, items: initialItems, currency, onDone, onEdit, 
 
   return (
     <div>
-      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">Assign Items</h2>
+      <h1 className="font-display text-4xl tracking-wide text-gold mb-1">Assign Items</h1>
       <p className="text-text-secondary text-sm mb-4">
         Tap names to assign. Tap multiple for a shared item.
       </p>
 
       <button
         onClick={splitEqually}
+        aria-pressed={isSplitEqually}
         className={cn(
           'w-full text-center text-sm py-2 mb-2 border rounded-xl transition-colors',
           isSplitEqually
@@ -98,7 +99,7 @@ export function Assign({ people, items: initialItems, currency, onDone, onEdit, 
 
       <button
         onClick={clearAll}
-        className="w-full text-center text-sm py-2 mb-5 border border-border rounded-xl text-text-secondary/60 transition-colors"
+        className="w-full text-center text-sm py-2 mb-5 border border-border rounded-xl text-text-secondary transition-colors"
       >
         Clear
       </button>
@@ -109,7 +110,11 @@ export function Assign({ people, items: initialItems, currency, onDone, onEdit, 
 
           return (
             <div key={item.id} ref={(el) => { itemCardRefs.current[item.id] = el }}>
-              <Card className={cn(item.assignedTo.length === 0 && 'ring-2 ring-red-500/70')}>
+              <Card
+                role="group"
+                aria-label={`${item.name}${item.assignedTo.length === 0 ? ' — not assigned to anyone yet' : ''}`}
+                className={cn(item.assignedTo.length === 0 && 'ring-2 ring-red-500/70')}
+              >
               <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-1.5">
                   <span className="text-text-primary font-medium">{item.name}</span>
@@ -134,6 +139,8 @@ export function Assign({ people, items: initialItems, currency, onDone, onEdit, 
                 {/* "All" shortcut pill */}
                 <button
                   onClick={() => assignAll(item.id)}
+                  aria-pressed={allAssigned}
+                  aria-label={`Assign ${item.name} to everyone`}
                   className={cn(
                     'rounded-full px-3 py-1 text-sm transition-colors border',
                     allAssigned
@@ -152,6 +159,8 @@ export function Assign({ people, items: initialItems, currency, onDone, onEdit, 
                     <button
                       key={person.id}
                       onClick={() => toggleAssign(item.id, person.id)}
+                      aria-pressed={selected}
+                      aria-label={`${person.name} — ${item.name}`}
                       className="rounded-full px-3 py-1 text-sm transition-colors"
                       style={selected
                         ? { backgroundColor: color ?? 'var(--color-gold)', color: '#0f0e0a', borderWidth: 1, borderStyle: 'solid', borderColor: 'transparent' }
@@ -172,8 +181,8 @@ export function Assign({ people, items: initialItems, currency, onDone, onEdit, 
 
       {!canContinue && (
         <div className="flex flex-col items-center gap-2 mb-6">
-          <p className="text-sm text-red-400">
-            {unassigned.length} item{unassigned.length !== 1 ? 's' : ''} still need to be assigned
+          <p role="status" className="text-sm text-red-400">
+            {unassigned.length} item{unassigned.length !== 1 ? 's' : ''} still need{unassigned.length === 1 ? 's' : ''} to be assigned
           </p>
           <Button
             variant="ghost"

@@ -43,7 +43,7 @@ function HistoryContent() {
         {!confirmDelete ? (
           <button
             onClick={() => setConfirmDelete(true)}
-            className="text-text-secondary/40 text-xs hover:text-red-400 transition-colors"
+            className="text-text-secondary text-xs hover:text-red-400 transition-colors"
           >
             Delete split
           </button>
@@ -51,7 +51,7 @@ function HistoryContent() {
           <div className="flex items-center justify-center gap-4 animate-fade-in">
             <span className="text-text-secondary text-xs">Delete this split?</span>
             <button onClick={handleDelete} className="text-red-400 text-sm font-medium">Delete</button>
-            <button onClick={() => setConfirmDelete(false)} className="text-text-secondary/40 text-sm">Cancel</button>
+            <button onClick={() => setConfirmDelete(false)} className="text-text-secondary text-sm">Cancel</button>
           </div>
         )}
       </div>

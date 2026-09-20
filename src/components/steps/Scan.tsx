@@ -92,7 +92,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
   const manualEntryLink = onManualEntry && (
     <button
       onClick={onManualEntry}
-      className="w-full text-center text-text-secondary/60 text-sm py-2 hover:text-text-secondary transition-colors"
+      className="w-full text-center text-text-secondary text-sm py-2 hover:text-text-secondary transition-colors"
     >
       Enter items manually
     </button>
@@ -100,7 +100,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
 
   return (
     <div>
-      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">Scan Receipt</h2>
+      <h1 className="font-display text-4xl tracking-wide text-gold mb-1">Scan Receipt</h1>
       <p className="text-text-secondary text-sm mb-6">Take a photo or upload from your gallery.</p>
 
       {/* Two separate inputs — capture forces camera; no capture goes to gallery */}
@@ -187,7 +187,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
           <div className="relative h-0.5 bg-border rounded-full overflow-hidden">
             <div className="animate-progress-bar absolute top-0 bottom-0 left-0 w-1/3 bg-gold/70 rounded-full" />
           </div>
-          <p className="text-text-secondary text-sm text-center">
+          <p role="status" className="text-text-secondary text-sm text-center">
             {pendingResult ? 'Almost done…' : 'Reading receipt…'}
           </p>
         </div>
@@ -201,7 +201,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
               <img src={previewUrl} alt="Receipt preview" className="w-full object-contain max-h-48" />
             </div>
           )}
-          <div className="rounded-2xl border border-red-900 bg-surface p-6 text-center">
+          <div role="alert" className="rounded-2xl border border-red-900 bg-surface p-6 text-center">
             <p className="text-red-400 text-sm mb-1">Could not read receipt</p>
             <p className="text-text-secondary text-xs">{errorMsg}</p>
           </div>

@@ -58,7 +58,7 @@ export default function Home() {
           <div className="flex items-start justify-between">
             <h1 className="font-display text-3xl text-gold">CheckPlease</h1>
             {!editingVenmo && (
-              <button onClick={startEditVenmo} className="text-text-secondary/50 text-xs hover:text-text-secondary transition-colors pt-1">
+              <button onClick={startEditVenmo} className="text-text-secondary text-xs hover:text-text-secondary transition-colors pt-1">
                 {venmoHandle ? `@${venmoHandle}` : 'Add your Venmo'}
               </button>
             )}
@@ -75,7 +75,7 @@ export default function Home() {
                   if (e.key === 'Enter') saveVenmo()
                   if (e.key === 'Escape') setEditingVenmo(false)
                 }}
-                className="flex-1 min-w-0 bg-transparent text-sm text-text-primary placeholder:text-text-secondary/40 outline-none border-b border-gold/50 pb-0.5 text-right"
+                className="flex-1 min-w-0 bg-transparent text-sm text-text-primary placeholder:text-text-secondary outline-none border-b border-gold/50 pb-0.5 text-right"
               />
               <button onClick={saveVenmo} className="text-gold text-xs shrink-0">Save</button>
             </div>
@@ -106,7 +106,7 @@ export default function Home() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-text-secondary text-xs uppercase tracking-widest">Groups</h2>
-            <Link href="/groups/edit?id=new" className="border border-border/60 rounded-lg px-3 py-1 text-xs text-text-secondary/65 hover:border-border hover:text-text-secondary transition-colors">
+            <Link href="/groups/edit?id=new" className="border border-border/60 rounded-lg px-3 py-1 text-xs text-text-secondary hover:border-border hover:text-text-secondary transition-colors">
               + New
             </Link>
           </div>
@@ -131,7 +131,7 @@ export default function Home() {
                         </div>
                       </Card>
                     </Link>
-                    <Link href={`/groups/edit?id=${group.id}`} className="text-text-secondary/40 hover:text-text-secondary text-xs transition-colors px-1 shrink-0">
+                    <Link href={`/groups/edit?id=${group.id}`} className="text-text-secondary hover:text-text-primary text-xs transition-colors px-1 shrink-0">
                       Edit
                     </Link>
                   </div>
@@ -139,14 +139,14 @@ export default function Home() {
               </div>
               {groups.length > GROUPS_ON_HOME && (
                 <div className="flex justify-center mt-3">
-                  <Link href="/groups" className="border border-border/60 rounded-lg px-4 py-1.5 text-xs text-text-secondary/65 hover:border-border hover:text-text-secondary transition-colors">
+                  <Link href="/groups" className="border border-border/60 rounded-lg px-4 py-1.5 text-xs text-text-secondary hover:border-border hover:text-text-secondary transition-colors">
                     More groups →
                   </Link>
                 </div>
               )}
             </>
           ) : (
-            <p className="text-text-secondary/50 text-sm ml-4">Save your frequent dining crew for faster splits.</p>
+            <p className="text-text-secondary text-sm ml-4">Save your frequent dining crew for faster splits.</p>
           )}
         </div>
 
@@ -171,7 +171,7 @@ export default function Home() {
             </div>
             {sessions.length > SPLITS_ON_HOME && (
               <div className="flex justify-center mt-3">
-                <Link href="/splits" className="border border-border/60 rounded-lg px-4 py-1.5 text-xs text-text-secondary/65 hover:border-border hover:text-text-secondary transition-colors">
+                <Link href="/splits" className="border border-border/60 rounded-lg px-4 py-1.5 text-xs text-text-secondary hover:border-border hover:text-text-secondary transition-colors">
                   More splits →
                 </Link>
               </div>
