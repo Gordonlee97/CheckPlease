@@ -5,7 +5,9 @@
   --color-surface: #1a1710;
   --color-border: #2d2820;
   --color-text-primary: #f5f0e8;
-  --color-text-secondary: #8a7a5a;
+  /* 4.66:1 on --color-surface, 5.03:1 on --color-bg — WCAG AA for body text.
+     Was #8a7a5a (4.27 on surface, just under AA). */
+  --color-text-secondary: #908066;
   --color-gold: #c9a84c;
   --color-gold-dark: #a07c2e;
 

@@ -157,16 +157,17 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
   return (
     <div>
-      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">Review Items</h2>
+      <h1 className="font-display text-4xl tracking-wide text-gold mb-1">Review Items</h1>
       <p className="text-text-secondary text-sm mb-1">Fix any mistakes before assigning.</p>
       {hasLowConfidence && (
-        <p className="text-amber-400/80 text-xs mb-5">⚠ Some prices had low scan confidence — double-check those items.</p>
+        <p role="status" className="text-amber-400/80 text-xs mb-5">⚠ Some prices had low scan confidence — double-check those items.</p>
       )}
       {!hasLowConfidence && <div className="mb-6" />}
 
       <div className="mb-4">
-        <label className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Restaurant</label>
+        <label htmlFor="restaurant" className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Restaurant</label>
         <Input
+          id="restaurant"
           value={label}
           onChange={e => setLabel(e.target.value)}
           placeholder="Restaurant name (optional)"
@@ -188,7 +189,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
                 className="text-amber-400 text-sm shrink-0"
                 title={`Scan confidence: ${Math.round(item.confidence * 100)}%`}
               >
-                ⚠
+                ⚠<span className="sr-only">Low scan confidence — check this price. </span>
               </span>
             )}
             <Input
@@ -197,6 +198,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
               onChange={e => updateItem(item.id, 'name', e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') focusNextReviewInput(e.currentTarget) }}
               placeholder="Item name"
+              aria-label="Item name"
+              aria-invalid={!isEmptyRow(item) && !item.name.trim()}
               data-review-input
             />
             <div className="flex items-center gap-1 shrink-0 w-24">
@@ -207,6 +210,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
                 inputMode="decimal"
                 value={item.priceStr}
                 placeholder="0.00"
+                aria-label={item.name.trim() ? `Price for ${item.name.trim()}` : 'Item price'}
+                aria-invalid={!isEmptyRow(item) && !(parseFloat(item.priceStr) > 0)}
                 onChange={e => updateItem(item.id, 'priceStr', e.target.value)}
                 onBlur={() => formatItem(item.id)}
                 onKeyDown={e => { if (e.key === 'Enter') { formatItem(item.id); focusNextReviewInput(e.currentTarget) } }}
@@ -233,7 +238,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
       {incomplete.length > 0 && (
         <div className="flex flex-col items-center gap-2 mb-6">
-          <p className="text-sm text-red-400">
+          <p role="status" className="text-sm text-red-400">
             {[
               missingPrice > 0 && `${missingPrice} item${missingPrice !== 1 ? 's' : ''} need${missingPrice === 1 ? 's' : ''} a price`,
               missingName > 0 && `${missingName} item${missingName !== 1 ? 's' : ''} need${missingName === 1 ? 's' : ''} a name`,
@@ -250,14 +255,14 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
       <div className="grid grid-cols-3 gap-2 mb-3">
         {([
-          { label: 'Tax', content: <Input type="text" inputMode="decimal" value={tax} onChange={e => setTax(e.target.value)} onBlur={() => setTax(formatCurrency(tax))} onKeyDown={e => { if (e.key === 'Enter') focusNextReviewInput(e.currentTarget) }} className="text-right" data-review-input /> },
-          { label: 'Tip', content: <Input type="text" inputMode="decimal" value={tip} onChange={e => setTip(e.target.value)} onBlur={() => setTip(formatCurrency(tip))} onKeyDown={e => { if (e.key === 'Enter') setTip(formatCurrency(tip)) }} className="text-right" data-review-input /> },
-          { label: 'Total', content: <Input readOnly value={computedTotal.toFixed(2)} className="text-right opacity-50 cursor-default" /> },
+          { label: 'Tax', content: <Input id="tax" type="text" inputMode="decimal" value={tax} onChange={e => setTax(e.target.value)} onBlur={() => setTax(formatCurrency(tax))} onKeyDown={e => { if (e.key === 'Enter') focusNextReviewInput(e.currentTarget) }} className="text-right" data-review-input /> },
+          { label: 'Tip', content: <Input id="tip" type="text" inputMode="decimal" value={tip} onChange={e => setTip(e.target.value)} onBlur={() => setTip(formatCurrency(tip))} onKeyDown={e => { if (e.key === 'Enter') setTip(formatCurrency(tip)) }} className="text-right" data-review-input /> },
+          { label: 'Total', content: <Input id="total" readOnly value={computedTotal.toFixed(2)} className="text-right opacity-50 cursor-default" /> },
         ] as const).map(({ label, content }) => (
           <div key={label}>
             <div className="flex items-center gap-1 mb-1">
               <span className="text-sm invisible" aria-hidden="true">{currencySymbol(currency)}</span>
-              <label className="text-text-secondary text-xs uppercase tracking-wider">{label}</label>
+              <label htmlFor={label.toLowerCase()} className="text-text-secondary text-xs uppercase tracking-wider">{label}</label>
             </div>
             <div className="flex items-center gap-1">
               <span className="text-text-secondary text-sm">{currencySymbol(currency)}</span>
@@ -268,7 +273,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
       </div>
 
       <div className="flex items-center justify-end gap-2 mb-8">
-        <label htmlFor="currency" className="text-text-secondary/60 text-xs uppercase tracking-wider">Currency</label>
+        <label htmlFor="currency" className="text-text-secondary text-xs uppercase tracking-wider">Currency</label>
         <select
           id="currency"
           value={currency}

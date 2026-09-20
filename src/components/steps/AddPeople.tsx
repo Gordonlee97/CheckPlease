@@ -111,12 +111,13 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
 
   return (
     <div>
-      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">Who&apos;s splitting?</h2>
+      <h1 className="font-display text-4xl tracking-wide text-gold mb-1">Who&apos;s splitting?</h1>
       <p className="text-text-secondary text-sm mb-6">Add everyone at the table.</p>
 
       <div className="flex gap-2 mb-2">
         <Input
           placeholder="Name"
+          aria-label="Name of someone at the table"
           value={name}
           onChange={e => setName(e.target.value)}
           onKeyDown={handleKey}
@@ -131,10 +132,18 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
             {suggestions.map(s => (
               <div
                 key={s.name}
-                className="flex items-center gap-0.5 rounded-full bg-surface border border-border pl-3 pr-1 py-1 cursor-pointer active:border-gold transition-colors"
-                onClick={() => addPerson(s.name)}
+                className="flex items-center gap-0.5 rounded-full bg-surface border border-border pl-3 pr-1 py-1 active:border-gold transition-colors"
               >
-                <span className="text-text-secondary text-sm">{s.name}</span>
+                {/* A real button, not a click-handled div: keyboard and switch
+                    users could not reach these suggestions before. */}
+                <button
+                  type="button"
+                  onClick={() => addPerson(s.name)}
+                  className="text-text-secondary text-sm cursor-pointer"
+                  aria-label={`Add ${s.name}`}
+                >
+                  {s.name}
+                </button>
                 <button
                   onClick={e => handleForget(s.name, e)}
                   className="text-border hover:text-text-secondary text-base leading-none px-1.5 py-0.5"
@@ -176,7 +185,7 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
               ))}
               <button
                 onClick={() => setShowGroupPicker(false)}
-                className="text-text-secondary/40 text-xs py-1 text-center"
+                className="text-text-secondary text-xs py-1 text-center"
               >
                 Cancel
               </button>
@@ -208,13 +217,14 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
                 </button>
               </div>
               <div className="flex items-center gap-2 pl-5">
-                <span className="text-text-secondary/50 text-sm">@</span>
+                <span className="text-text-secondary text-sm">@</span>
                 <input
                   type="text"
                   placeholder="venmo handle (optional)"
+                  aria-label={`Venmo handle for ${person.name} (optional)`}
                   value={person.venmoHandle ?? ''}
                   onChange={e => updateVenmo(person.id, e.target.value)}
-                  className="flex-1 bg-transparent text-sm text-text-secondary placeholder:text-text-secondary/30 outline-none border-b border-border/40 pb-0.5 focus:border-gold/50 transition-colors"
+                  className="flex-1 bg-transparent text-sm text-text-secondary placeholder:text-text-secondary outline-none border-b border-border/40 pb-0.5 focus:border-gold/50 transition-colors"
                 />
               </div>
             </Card>
@@ -225,14 +235,14 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
       {people.length >= 2 && !savingGroup && !groupSavedVisible && (
         <button
           onClick={() => setSavingGroup(true)}
-          className="w-full text-center text-text-secondary/40 text-xs py-2 hover:text-text-secondary/70 transition-colors"
+          className="w-full text-center text-text-secondary text-xs py-2 hover:text-text-secondary/70 transition-colors"
         >
           Save as group
         </button>
       )}
 
       {groupSavedVisible && (
-        <p className="w-full text-center text-gold/70 text-xs py-2 animate-fade-in-delayed">Group saved!</p>
+        <p role="status" className="w-full text-center text-gold/70 text-xs py-2 animate-fade-in-delayed">Group saved!</p>
       )}
 
       {savingGroup && (
@@ -241,16 +251,17 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
             autoFocus
             type="text"
             placeholder="Group name (e.g. Roommates)"
+            aria-label="Group name"
             value={groupName}
             onChange={e => setGroupName(e.target.value)}
             onKeyDown={e => {
               if (e.key === 'Enter') confirmSaveGroup()
               if (e.key === 'Escape') setSavingGroup(false)
             }}
-            className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-secondary/40 outline-none border-b border-gold/50 pb-0.5 focus:border-gold transition-colors"
+            className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-secondary outline-none border-b border-gold/50 pb-0.5 focus:border-gold transition-colors"
           />
           <button onClick={confirmSaveGroup} className="text-gold text-xs shrink-0">Save</button>
-          <button onClick={() => setSavingGroup(false)} className="text-text-secondary/40 text-xs shrink-0">Cancel</button>
+          <button onClick={() => setSavingGroup(false)} className="text-text-secondary text-xs shrink-0">Cancel</button>
         </div>
       )}
     </div>

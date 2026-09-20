@@ -34,10 +34,10 @@ export default function SplitsPage() {
         <button onClick={handleBack} className="text-text-secondary hover:text-text-primary text-sm">← Back</button>
       </div>
 
-      <h2 className="font-display text-4xl tracking-wide text-gold mb-6">All Splits</h2>
+      <h1 className="font-display text-4xl tracking-wide text-gold mb-6">All Splits</h1>
 
       {sessions.length === 0 ? (
-        <p className="text-text-secondary/50 text-sm">No splits yet.</p>
+        <p className="text-text-secondary text-sm">No splits yet.</p>
       ) : (
         <>
           <div className="flex flex-col gap-3">
@@ -59,7 +59,7 @@ export default function SplitsPage() {
           {hasMore && (
             <button
               onClick={() => setVisible(v => v + PAGE_SIZE)}
-              className="w-full mt-6 text-center text-text-secondary/50 text-sm py-3 border border-border/40 rounded-xl hover:text-text-secondary hover:border-border transition-colors"
+              className="w-full mt-6 text-center text-text-secondary text-sm py-3 border border-border/40 rounded-xl hover:text-text-secondary hover:border-border transition-colors"
             >
               Show more
             </button>

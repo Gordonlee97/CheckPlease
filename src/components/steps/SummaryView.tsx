@@ -74,7 +74,7 @@ function ShareCard({ share, index, session }: ShareCardProps) {
           {share.assignedItems.map(i => i.shared ? `${i.name} (shared)` : i.name).join(' · ')}
         </p>
         <div className="flex items-center justify-between pt-1 border-t border-border">
-          <p className="text-[11px] text-text-secondary/50">
+          <p className="text-[11px] text-text-secondary">
             Items {formatMoney(share.itemSubtotal, session.currency)}
             {session.tax > 0 && ` · Tax ${formatMoney(share.taxShare, session.currency)}`}
             {session.tip > 0 && ` · Tip ${formatMoney(share.tipShare, session.currency)}`}
@@ -83,7 +83,7 @@ function ShareCard({ share, index, session }: ShareCardProps) {
           {(normalizeCurrency(session.currency) ?? DEFAULT_CURRENCY) === DEFAULT_CURRENCY && (
             <button
               onClick={() => window.open(venmoUrl, '_system')}
-              className="text-[11px] text-[#008CFF]/70 hover:text-[#008CFF] transition-colors shrink-0 ml-3"
+              className="text-[11px] text-[#008CFF] hover:text-[#008CFF] transition-colors shrink-0 ml-3"
             >
               Request on Venmo
             </button>
@@ -114,9 +114,9 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
 
   return (
     <div>
-      <h2 className="font-display text-4xl tracking-wide text-gold mb-1">
+      <h1 className="font-display text-4xl tracking-wide text-gold mb-1">
         {session.label ?? 'Unknown Restaurant'}
-      </h2>
+      </h1>
       <p className="text-text-secondary text-sm mb-6">
         {new Date(session.createdAt).toLocaleDateString()} · {session.people.length} people · {formatMoney(session.total, session.currency)} total
       </p>
@@ -132,7 +132,8 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
         <button
           onClick={toggleQr}
           disabled={buildingQr}
-          className="text-text-secondary/60 text-xs hover:text-text-secondary transition-colors disabled:opacity-50"
+          aria-expanded={!!qr}
+          className="text-text-secondary text-xs hover:text-text-secondary transition-colors disabled:opacity-50"
         >
           {qr ? 'Hide QR code' : buildingQr ? 'Making QR code…' : 'Show QR code'}
         </button>
@@ -149,10 +150,10 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
               width={qr.image.size}
               height={qr.image.size}
             />
-            <p className="text-text-secondary/60 text-xs">Point a camera at this to open the split</p>
+            <p className="text-text-secondary text-xs">Point a camera at this to open the split</p>
           </div>
         ) : (
-          <p className="text-text-secondary/60 text-xs text-center animate-fade-in">
+          <p className="text-text-secondary text-xs text-center animate-fade-in">
             This split has too many items for a QR code — use Share link instead.
           </p>
         ))}
@@ -167,7 +168,7 @@ export function SummaryView({ session, shares, readOnly = false, onDone, ref, on
             </div>
           </div>
           {toast && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface text-text-primary px-4 py-2 rounded-xl shadow-lg text-sm z-50">
+            <div role="status" className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface text-text-primary px-4 py-2 rounded-xl shadow-lg text-sm z-50">
               {toast}
             </div>
           )}

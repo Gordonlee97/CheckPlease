@@ -279,9 +279,9 @@ export default function NewSplitPage() {
             )}
             {confirmCancel ? (
               <div className="flex items-center gap-3 animate-fade-in">
-                <span className="text-text-secondary/60 text-xs">Discard?</span>
+                <span className="text-text-secondary text-xs">Discard?</span>
                 <button onClick={handleDiscard} className="text-red-400 text-sm">Discard</button>
-                <button onClick={() => setConfirmCancel(false)} className="text-text-secondary/40 text-sm">Keep</button>
+                <button onClick={() => setConfirmCancel(false)} className="text-text-secondary text-sm">Keep</button>
               </div>
             ) : (
               <button
@@ -390,7 +390,7 @@ export default function NewSplitPage() {
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface text-text-primary px-4 py-2 rounded-xl shadow-lg text-sm z-50">
+        <div role="status" className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface text-text-primary px-4 py-2 rounded-xl shadow-lg text-sm z-50">
           {toast}
         </div>
       )}
