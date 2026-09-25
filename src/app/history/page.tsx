@@ -7,6 +7,7 @@ import { getSession, deleteSession } from '@/lib/storage'
 import { computeSplit } from '@/lib/splitting'
 import type { Session } from '@/lib/types'
 import { SummaryView } from '@/components/steps/SummaryView'
+import { PageLoading } from '@/components/ui/PageLoading'
 
 function HistoryContent() {
   const searchParams = useSearchParams()
@@ -23,7 +24,8 @@ function HistoryContent() {
     })
   }, [id, router])
 
-  if (!session) return null
+  // Redirects on a missing id, so this is the IndexedDB read, not a dead end
+  if (!session) return <PageLoading label="Loading split…" />
 
   async function handleDelete() {
     await deleteSession(id)
@@ -61,7 +63,7 @@ function HistoryContent() {
 
 export default function HistoryPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageLoading label="Loading split…" />}>
       <HistoryContent />
     </Suspense>
   )
