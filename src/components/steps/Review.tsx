@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useImperativeHandle, useEffect, useRef, type Ref } from 'react'
+import { useState, useImperativeHandle, useEffect, useRef, useId, type Ref } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Item } from '@/lib/types'
 import { Input } from '@/components/ui/Input'
@@ -68,6 +68,9 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
           confidence: i.confidence,
         }))
   )
+  // Namespaced so two Review instances on one page can't collide on ids
+  // as generic as "tax" and "total".
+  const uid = useId()
   const itemCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [tax, setTax] = useState(initTax.toFixed(2))
   const [tip, setTip] = useState(initTip.toFixed(2))
@@ -165,9 +168,9 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
       {!hasLowConfidence && <div className="mb-6" />}
 
       <div className="mb-4">
-        <label htmlFor="restaurant" className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Restaurant</label>
+        <label htmlFor={`${uid}-restaurant`} className="text-text-secondary text-xs uppercase tracking-wider block mb-1">Restaurant</label>
         <Input
-          id="restaurant"
+          id={`${uid}-restaurant`}
           value={label}
           onChange={e => setLabel(e.target.value)}
           placeholder="Restaurant name (optional)"
@@ -255,27 +258,31 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
       <div className="grid grid-cols-3 gap-2 mb-3">
         {([
-          { label: 'Tax', content: <Input id="tax" type="text" inputMode="decimal" value={tax} onChange={e => setTax(e.target.value)} onBlur={() => setTax(formatCurrency(tax))} onKeyDown={e => { if (e.key === 'Enter') focusNextReviewInput(e.currentTarget) }} className="text-right" data-review-input /> },
-          { label: 'Tip', content: <Input id="tip" type="text" inputMode="decimal" value={tip} onChange={e => setTip(e.target.value)} onBlur={() => setTip(formatCurrency(tip))} onKeyDown={e => { if (e.key === 'Enter') setTip(formatCurrency(tip)) }} className="text-right" data-review-input /> },
-          { label: 'Total', content: <Input id="total" readOnly value={computedTotal.toFixed(2)} className="text-right opacity-50 cursor-default" /> },
-        ] as const).map(({ label, content }) => (
-          <div key={label}>
-            <div className="flex items-center gap-1 mb-1">
-              <span className="text-sm invisible" aria-hidden="true">{currencySymbol(currency)}</span>
-              <label htmlFor={label.toLowerCase()} className="text-text-secondary text-xs uppercase tracking-wider">{label}</label>
+          { label: 'Tax', render: (id: string) => <Input id={id} type="text" inputMode="decimal" value={tax} onChange={e => setTax(e.target.value)} onBlur={() => setTax(formatCurrency(tax))} onKeyDown={e => { if (e.key === 'Enter') focusNextReviewInput(e.currentTarget) }} className="text-right" data-review-input /> },
+          { label: 'Tip', render: (id: string) => <Input id={id} type="text" inputMode="decimal" value={tip} onChange={e => setTip(e.target.value)} onBlur={() => setTip(formatCurrency(tip))} onKeyDown={e => { if (e.key === 'Enter') setTip(formatCurrency(tip)) }} className="text-right" data-review-input /> },
+          { label: 'Total', render: (id: string) => <Input id={id} readOnly value={computedTotal.toFixed(2)} className="text-right opacity-50 cursor-default" /> },
+        ] as const).map(({ label, render }) => {
+          // One source of truth for the id, so the label always points at its input
+          const inputId = `${uid}-${label.toLowerCase()}`
+          return (
+            <div key={label}>
+              <div className="flex items-center gap-1 mb-1">
+                <span className="text-sm invisible" aria-hidden="true">{currencySymbol(currency)}</span>
+                <label htmlFor={inputId} className="text-text-secondary text-xs uppercase tracking-wider">{label}</label>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-text-secondary text-sm">{currencySymbol(currency)}</span>
+                {render(inputId)}
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="text-text-secondary text-sm">{currencySymbol(currency)}</span>
-              {content}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div className="flex items-center justify-end gap-2 mb-8">
-        <label htmlFor="currency" className="text-text-secondary text-xs uppercase tracking-wider">Currency</label>
+        <label htmlFor={`${uid}-currency`} className="text-text-secondary text-xs uppercase tracking-wider">Currency</label>
         <select
-          id="currency"
+          id={`${uid}-currency`}
           value={currency}
           onChange={e => setCurrency(e.target.value)}
           className="bg-surface border border-border rounded-lg px-2 py-1 text-sm text-text-primary outline-none focus:border-gold"
