@@ -8,6 +8,7 @@ import { getPersonColor } from '@/lib/personColors'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
+import { PageLoading } from '@/components/ui/PageLoading'
 
 interface EditablePerson extends GroupPerson {
   key: string
@@ -178,7 +179,7 @@ function GroupEditorContent() {
 
 export default function GroupEditorPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageLoading label="Loading group…" />}>
       <GroupEditorContent />
     </Suspense>
   )
