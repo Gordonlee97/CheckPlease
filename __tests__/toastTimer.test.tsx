@@ -15,10 +15,16 @@ const session: Session = {
   subtotal: 5, tax: 0, tip: 0, total: 5,
 }
 
-let api: ReturnType<typeof useShareActions>
+// Wired the way the real screens use it: buttons that call the actions
 function Probe() {
-  api = useShareActions(session, [])
-  return <span data-toast>{api.toast ?? ''}</span>
+  const { toast, shareLink, copyText } = useShareActions(session, [])
+  return (
+    <>
+      <span data-toast>{toast ?? ''}</span>
+      <button data-share onClick={shareLink}>Share link</button>
+      <button data-copy onClick={copyText}>Copy text</button>
+    </>
+  )
 }
 
 let container: HTMLDivElement
@@ -44,21 +50,25 @@ afterEach(() => {
 })
 
 const toastText = () => container.querySelector('[data-toast]')!.textContent
+const click = async (sel: string) => {
+  const btn = container.querySelector(sel) as HTMLButtonElement
+  await act(async () => { btn.click() })
+}
 
 describe('share toasts', () => {
   it('shows a toast and clears it after the timeout', async () => {
-    await act(async () => { await api.shareLink() })
+    await click('[data-share]')
     expect(toastText()).toBe('Link copied to clipboard!')
 
     act(() => { jest.advanceTimersByTime(2500) })
     expect(toastText()).toBe('')
   })
 
-  it('a second toast is not cut short by the first ones timer', async () => {
-    await act(async () => { await api.shareLink() })
+  it('does not let the first toast timer cut the second one short', async () => {
+    await click('[data-share]')
     act(() => { jest.advanceTimersByTime(2000) })   // first toast nearly expired
 
-    await act(async () => { await api.copyText() })
+    await click('[data-copy]')
     expect(toastText()).toBe('Copied to clipboard!')
 
     // The first toast's timer would have fired here and blanked the second
@@ -72,7 +82,7 @@ describe('share toasts', () => {
   // Counted as a delta: React keeps a scheduler timer of its own, so the
   // absolute number is not ours to assert.
   it('clears the pending hide timer on unmount', async () => {
-    await act(async () => { await api.shareLink() })
+    await click('[data-share]')
     const pending = jest.getTimerCount()
 
     act(() => root.unmount())
