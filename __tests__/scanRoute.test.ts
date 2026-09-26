@@ -160,6 +160,26 @@ describe('POST /api/scan', () => {
     expect(res.status).toBe(400)
   })
 
+  it('rejects a file upload rather than passing it to an OCR provider', async () => {
+    const azure = jest.fn()
+    global.fetch = azure as unknown as typeof fetch
+    const form = new FormData()
+    form.append('image', new Blob(['not base64'], { type: 'image/jpeg' }), 'receipt.jpg')
+
+    const res = await post(scanRequest(form))
+
+    expect(res.status).toBe(400)
+    expect(azure).not.toHaveBeenCalled()   // Azure never contacted
+    expect(parse).not.toHaveBeenCalled()   // nor Claude
+  })
+
+  it('rejects an empty image field', async () => {
+    const form = new FormData()
+    form.append('image', '')
+
+    expect((await post(scanRequest(form))).status).toBe(400)
+  })
+
   it('passes the rate limiter refusal through with Retry-After', async () => {
     ;(checkRateLimit as jest.Mock).mockResolvedValue({ allowed: false, retryAfterSeconds: 120 })
 
