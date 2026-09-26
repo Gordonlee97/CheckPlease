@@ -52,8 +52,10 @@ function ShareCard({ share, index, session }: ShareCardProps) {
   const venmoHandle = person?.venmoHandle
   const note = encodeURIComponent(session.label ?? 'Dinner')
 
+  // Encoded: a handle arriving from a share link is untrusted, and an
+  // unescaped & or # there would splice extra parameters into the deep link.
   const venmoUrl = venmoHandle
-    ? `venmo://paycharge?txn=charge&recipients=${venmoHandle}&amount=${share.total.toFixed(2)}&note=${note}`
+    ? `venmo://paycharge?txn=charge&recipients=${encodeURIComponent(venmoHandle)}&amount=${share.total.toFixed(2)}&note=${note}`
     : `venmo://paycharge?txn=charge&amount=${share.total.toFixed(2)}&note=${note}`
 
   return (
