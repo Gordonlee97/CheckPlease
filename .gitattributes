@@ -1,0 +1,9 @@
+# Store every text file with LF and check it out with LF, regardless of the
+# contributor's core.autocrlf. Without this, editing a file on Windows could
+# leave it permanently "modified" with no content difference.
+* text=auto eol=lf
+
+# Binary: never line-ending-converted, never diffed as text.
+*.png binary
+*.jpg binary
+*.ico binary
