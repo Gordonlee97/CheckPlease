@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { Session } from '@/lib/types'
 import type { PersonShare } from '@/lib/splitting'
 import { buildShareUrl, buildPlainText } from '@/lib/share'
@@ -10,10 +10,16 @@ import { getMyVenmoHandle } from '@/lib/userSettings'
 export function useShareActions(session: Session, shares: PersonShare[]) {
   const [toast, setToast] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Clear on unmount so a pending hide can't fire against a gone component
+  useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current) }, [])
 
   function showToast(msg: string) {
+    // Without this, the previous toast's timer would cut the new one short
+    if (hideTimer.current) clearTimeout(hideTimer.current)
     setToast(msg)
-    setTimeout(() => setToast(null), 2500)
+    hideTimer.current = setTimeout(() => setToast(null), 2500)
   }
 
   async function shareLink() {
