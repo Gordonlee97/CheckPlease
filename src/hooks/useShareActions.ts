@@ -28,7 +28,15 @@ export function useShareActions(session: Session, shares: PersonShare[]) {
     try {
       const url = buildShareUrl(session)
       if (navigator.share) {
-        try { await navigator.share({ title: 'CheckPlease split', url }); return } catch {}
+        try {
+          await navigator.share({ title: 'CheckPlease split', url })
+          return
+        } catch (err) {
+          // Dismissing the share sheet is a decision, not a failure — copying
+          // anyway would claim "Link copied" for an action the user cancelled.
+          // Any other reason still falls through to the clipboard.
+          if (err instanceof DOMException && err.name === 'AbortError') return
+        }
       }
       try { await navigator.clipboard.writeText(url); showToast('Link copied to clipboard!') }
       catch { showToast('Could not copy link') }
