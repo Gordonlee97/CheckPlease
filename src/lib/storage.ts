@@ -5,12 +5,22 @@ const DB_NAME = 'checkplease'
 const STORE = 'sessions'
 const VERSION = 1
 
-async function getDB() {
-  return openDB(DB_NAME, VERSION, {
-    upgrade(db) {
-      db.createObjectStore(STORE, { keyPath: 'id' })
-    },
-  })
+// Opened once and reused. Every call used to open its own connection, none of
+// which were ever closed, so they accumulated for as long as the tab lived.
+let dbPromise: ReturnType<typeof openDB> | null = null
+
+function getDB() {
+  if (!dbPromise) {
+    dbPromise = openDB(DB_NAME, VERSION, {
+      upgrade(db) {
+        db.createObjectStore(STORE, { keyPath: 'id' })
+      },
+    }).catch(err => {
+      dbPromise = null   // let the next call retry rather than caching a failure
+      throw err
+    })
+  }
+  return dbPromise
 }
 
 export async function saveSession(session: Session): Promise<void> {
