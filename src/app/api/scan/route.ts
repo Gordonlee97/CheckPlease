@@ -114,8 +114,10 @@ export async function POST(req: NextRequest) {
     }
 
     const formData = await req.formData()
-    const base64Image = formData.get('image') as string | null
-    if (!base64Image) {
+    // A cast would let a File through and surface as a confusing 503 from
+    // whichever OCR provider choked on it first.
+    const base64Image = formData.get('image')
+    if (typeof base64Image !== 'string' || base64Image.length === 0) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400, headers })
     }
 
