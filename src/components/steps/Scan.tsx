@@ -52,10 +52,12 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
     return () => URL.revokeObjectURL(url)
   }, [selectedFile])
 
+  // Picking a photo is the decision to scan it, so there's no second tap.
+  // Retake and Gallery stay available if the photo turns out to be wrong.
   function handleFileSelect(file: File) {
     setSelectedFile(file)
     onFileSelect?.(file)
-    setStatus('idle')
+    handleScan(file)
   }
 
   async function handleScan(file: File) {
