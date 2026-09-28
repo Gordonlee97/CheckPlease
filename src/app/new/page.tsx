@@ -39,6 +39,7 @@ interface Draft {
   tax: number
   tip: number
   total: number
+  receiptSubtotal?: number
   label?: string
   currency?: string
 }
@@ -79,6 +80,7 @@ export default function NewSplitPage() {
           tax: saved.tax,
           tip: saved.tip,
           total: saved.total,
+          receiptSubtotal: saved.receiptSubtotal,
           label: saved.label,
           currency: saved.currency,
         })
@@ -187,6 +189,7 @@ export default function NewSplitPage() {
       tax: result.tax,
       tip: result.tip,
       total: result.total,
+      receiptSubtotal: result.subtotal,
       label: result.label,
       currency: result.currency,
     }))
@@ -327,6 +330,7 @@ export default function NewSplitPage() {
                 items={draft.items}
                 tax={draft.tax}
                 tip={draft.tip}
+                receiptSubtotal={draft.receiptSubtotal}
                 label={draft.label}
                 currency={draft.currency}
                 onDone={handleReviewDone}

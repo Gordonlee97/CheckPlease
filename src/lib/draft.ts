@@ -19,6 +19,9 @@ export interface SplitDraft {
   tax: number
   tip: number
   total: number
+  // The subtotal printed on the receipt. Kept apart from `subtotal`, which
+  // Review overwrites with the sum of the edited items.
+  receiptSubtotal?: number
   label?: string
   currency?: string
 }

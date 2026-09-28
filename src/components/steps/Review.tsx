@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
-import { currencySymbol, normalizeCurrency, DEFAULT_CURRENCY } from '@/lib/money'
+import { currencySymbol, formatMoney, normalizeCurrency, DEFAULT_CURRENCY } from '@/lib/money'
 
 interface ItemInput {
   id: string
@@ -57,6 +57,8 @@ interface Props {
   items: Item[]
   tax: number
   tip: number
+  // Subtotal printed on the receipt; 0 or absent when there isn't one to check against
+  receiptSubtotal?: number
   label?: string
   currency?: string
   onDone: (result: ReviewResult) => void
@@ -66,7 +68,7 @@ interface Props {
   onReadyChange?: (ready: boolean) => void
 }
 
-export function Review({ items: initialItems, tax: initTax, tip: initTip, label: initLabel, currency: initCurrency, onDone, onEdit, ref, onReadyChange }: Props) {
+export function Review({ items: initialItems, tax: initTax, tip: initTip, receiptSubtotal, label: initLabel, currency: initCurrency, onDone, onEdit, ref, onReadyChange }: Props) {
   const [items, setItems] = useState<ItemInput[]>(() =>
     initialItems.length === 0
       // Manual entry (or a scan that found nothing): give them a row to type into
@@ -93,6 +95,10 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
   // Total is always derived — no editable state, so tip/tax/items can never diverge from total
   const itemsSum = items.reduce((sum, i) => sum + (parseFloat(i.priceStr) || 0), 0)
   const computedTotal = itemsSum + Math.max(0, parseFloat(tax) || 0) + Math.max(0, parseFloat(tip) || 0)
+
+  // A missed or misread line is the costliest scan error, and the subtotal is
+  // what exposes it. It only warns: the receipt itself may be the one that's off.
+  const subtotalMismatch = !!receiptSubtotal && Math.abs(itemsSum - receiptSubtotal) >= 0.005
 
   const hasLowConfidence = items.some(i => i.confidence !== undefined && i.confidence < 0.8)
 
@@ -271,6 +277,12 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
             Go to item ↓
           </Button>
         </div>
+      )}
+
+      {subtotalMismatch && (
+        <p role="status" data-testid="subtotal-mismatch" className="text-amber-400/80 text-xs text-center mb-4">
+          ⚠ Items add up to {formatMoney(itemsSum, currency)}, but the receipt&apos;s subtotal is {formatMoney(receiptSubtotal, currency)}. An item may be missing or misread.
+        </p>
       )}
 
       <div className="grid grid-cols-3 gap-2 mb-3">
