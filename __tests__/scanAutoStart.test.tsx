@@ -51,7 +51,7 @@ describe('Scan: picking a photo', () => {
     await pickPhoto(receipt())
     expect(fetchMock).toHaveBeenCalledTimes(1)
     // Straight into scanning: no preview waiting on a Scan Receipt tap
-    expect(container.textContent).not.toContain('Retake')
+    expect(container.querySelector('[role="status"]')?.textContent).toMatch(/Reading receipt|Almost done/)
   })
 
   it('does not rescan on its own when coming back to a photo already taken', async () => {
@@ -67,5 +67,27 @@ describe('Scan: picking a photo', () => {
 
     await pickPhoto(receipt())
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  // Without the preview step, a wrong photo is only noticed once it's scanning
+  it('lets a wrong photo be retaken mid-scan, and uses only the new one', async () => {
+    let finishFirst!: (r: unknown) => void
+    fetchMock
+      .mockReturnValueOnce(new Promise(r => { finishFirst = r }))
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ items: [{ name: 'Right', price: 5 }], subtotal: 5, tax: 0, tip: 0, total: 5 }) })
+    const onDone = jest.fn()
+    act(() => root.render(<Scan onDone={onDone} />))
+
+    await pickPhoto(receipt())
+    expect(container.textContent).toContain('Retake')
+    await pickPhoto(receipt())
+    await act(async () => finishFirst({ ok: true, json: async () => ({ items: [{ name: 'Wrong', price: 9 }], subtotal: 9, tax: 0, tip: 0, total: 9 }) }))
+
+    // The result is handed over once the scan line finishes its sweep
+    const scanLine = container.querySelector('.animate-scan-line-once')!
+    await act(async () => { scanLine.dispatchEvent(new Event('animationend', { bubbles: true })) })
+
+    expect(onDone).toHaveBeenCalledTimes(1)
+    expect(onDone.mock.calls[0][0].items[0].name).toBe('Right')
   })
 })

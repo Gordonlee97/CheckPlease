@@ -28,6 +28,10 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
   // Hold the scan result until the animation has finished its full sweep
   const [pendingResult, setPendingResult] = useState<ScanResult | null>(null)
   const [animDone, setAnimDone] = useState(false)
+  // Bumped per scan: a result from an earlier photo is dropped, and the scan
+  // line remounts so its sweep (which gates navigation) runs again
+  const [scanRun, setScanRun] = useState(0)
+  const scanRunRef = useRef(0)
 
   // Navigate only once both the API result AND the animation are ready
   useEffect(() => {
@@ -61,6 +65,8 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
   }
 
   async function handleScan(file: File) {
+    const run = ++scanRunRef.current
+    setScanRun(run)
     setStatus('scanning')
     setErrorMsg('')
     setPendingResult(null)
@@ -78,8 +84,10 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
         throw new Error(body.error ?? 'Scan failed')
       }
       const result: ScanResult = await res.json()
+      if (run !== scanRunRef.current) return
       setPendingResult(result)
     } catch (err) {
+      if (run !== scanRunRef.current) return
       setStatus('error')
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
     }
@@ -89,6 +97,24 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
   useImperativeHandle(ref, () => ({
     submit: () => { if (selectedFile && (status === 'idle' || status === 'error')) handleScan(selectedFile) },
   }))
+
+  // Picking a new photo from here replaces any scan still running
+  const retakeButtons = (
+      <div className="flex gap-2">
+        <button
+          onClick={() => cameraRef.current?.click()}
+          className="flex-1 rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
+        >
+          📷 Retake
+        </button>
+        <button
+          onClick={() => galleryRef.current?.click()}
+          className="flex-1 rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
+        >
+          🖼 Gallery
+        </button>
+      </div>
+  )
 
   // Not offered while scanning, so a late scan result can't overwrite typed items
   const manualEntryLink = onManualEntry && (
@@ -145,20 +171,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
             </div>
           )}
           <p className="text-text-secondary text-xs text-center truncate px-2">{selectedFile.name}</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => cameraRef.current?.click()}
-              className="flex-1 rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
-            >
-              📷 Retake
-            </button>
-            <button
-              onClick={() => galleryRef.current?.click()}
-              className="flex-1 rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
-            >
-              🖼 Gallery
-            </button>
-          </div>
+          {retakeButtons}
           {manualEntryLink}
         </div>
       )}
@@ -176,6 +189,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
               />
               {/* Thin white scan line — linear, single pass, navigates only after this fires */}
               <div
+                key={scanRun}
                 className="animate-scan-line-once absolute left-0 right-0 h-px pointer-events-none"
                 onAnimationEnd={() => setAnimDone(true)}
                 style={{
@@ -192,6 +206,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
           <p role="status" className="text-text-secondary text-sm text-center">
             {pendingResult ? 'Almost done…' : 'Reading receipt…'}
           </p>
+          {retakeButtons}
         </div>
       )}
 
@@ -207,20 +222,7 @@ export function Scan({ initialFile, onFileSelect, onDone, onManualEntry, ref, on
             <p className="text-red-400 text-sm mb-1">Could not read receipt</p>
             <p className="text-text-secondary text-xs">{errorMsg}</p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => cameraRef.current?.click()}
-              className="flex-1 rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
-            >
-              📷 Retake
-            </button>
-            <button
-              onClick={() => galleryRef.current?.click()}
-              className="flex-1 rounded-2xl border border-dashed border-border bg-surface flex items-center justify-center py-3 gap-2 text-text-secondary text-sm active:border-gold transition-colors"
-            >
-              🖼 Gallery
-            </button>
-          </div>
+          {retakeButtons}
           {onManualEntry && (
             <Button fullWidth variant="ghost" onClick={onManualEntry}>Enter items manually</Button>
           )}
