@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useImperativeHandle, useEffect, useRef, useId, type Ref } from 'react'
+import { useState, useImperativeHandle, useEffect, useRef, useId, type Ref, type FocusEvent } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Item } from '@/lib/types'
 import { Input } from '@/components/ui/Input'
@@ -24,6 +24,17 @@ function blankItem(): ItemInput {
 // An untouched row (the starter row, or one added by mistake) is ignored.
 function isEmptyRow(item: ItemInput): boolean {
   return !item.name.trim() && !item.priceStr.trim()
+}
+
+// Zero shows as an empty box with a 0.00 hint, so typing never lands after
+// a leftover "0.00".
+function toMoneyInput(amount: number): string {
+  return amount ? amount.toFixed(2) : ''
+}
+
+// Selecting on focus means typing replaces the amount instead of appending
+function selectAll(e: FocusEvent<HTMLInputElement>) {
+  e.currentTarget.select()
 }
 
 function isComplete(item: ItemInput): boolean {
@@ -63,7 +74,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
       : initialItems.map(i => ({
           id: i.id,
           name: i.name,
-          priceStr: i.price ? i.price.toFixed(2) : '',
+          priceStr: toMoneyInput(i.price),
           assignedTo: i.assignedTo,
           confidence: i.confidence,
         }))
@@ -72,8 +83,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
   // as generic as "tax" and "total".
   const uid = useId()
   const itemCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const [tax, setTax] = useState(initTax.toFixed(2))
-  const [tip, setTip] = useState(initTip.toFixed(2))
+  const [tax, setTax] = useState(toMoneyInput(initTax))
+  const [tip, setTip] = useState(toMoneyInput(initTip))
   const [label, setLabel] = useState(initLabel ?? '')
   const [currency, setCurrency] = useState(normalizeCurrency(initCurrency) ?? DEFAULT_CURRENCY)
 
@@ -216,6 +227,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
                 aria-label={item.name.trim() ? `Price for ${item.name.trim()}` : 'Item price'}
                 aria-invalid={!isEmptyRow(item) && !(parseFloat(item.priceStr) > 0)}
                 onChange={e => updateItem(item.id, 'priceStr', e.target.value)}
+                onFocus={selectAll}
                 onBlur={() => formatItem(item.id)}
                 onKeyDown={e => { if (e.key === 'Enter') { formatItem(item.id); focusNextReviewInput(e.currentTarget) } }}
                 data-review-input
@@ -258,8 +270,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
 
       <div className="grid grid-cols-3 gap-2 mb-3">
         {([
-          { label: 'Tax', render: (id: string) => <Input id={id} type="text" inputMode="decimal" value={tax} onChange={e => setTax(e.target.value)} onBlur={() => setTax(formatCurrency(tax))} onKeyDown={e => { if (e.key === 'Enter') focusNextReviewInput(e.currentTarget) }} className="text-right" data-review-input /> },
-          { label: 'Tip', render: (id: string) => <Input id={id} type="text" inputMode="decimal" value={tip} onChange={e => setTip(e.target.value)} onBlur={() => setTip(formatCurrency(tip))} onKeyDown={e => { if (e.key === 'Enter') setTip(formatCurrency(tip)) }} className="text-right" data-review-input /> },
+          { label: 'Tax', render: (id: string) => <Input id={id} type="text" inputMode="decimal" placeholder="0.00" value={tax} onChange={e => setTax(e.target.value)} onFocus={selectAll} onBlur={() => setTax(formatCurrency(tax))} onKeyDown={e => { if (e.key === 'Enter') focusNextReviewInput(e.currentTarget) }} className="text-right" data-review-input /> },
+          { label: 'Tip', render: (id: string) => <Input id={id} type="text" inputMode="decimal" placeholder="0.00" value={tip} onChange={e => setTip(e.target.value)} onFocus={selectAll} onBlur={() => setTip(formatCurrency(tip))} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }} className="text-right" data-review-input /> },
           { label: 'Total', render: (id: string) => <Input id={id} readOnly value={computedTotal.toFixed(2)} className="text-right opacity-50 cursor-default" /> },
         ] as const).map(({ label, render }) => {
           // One source of truth for the id, so the label always points at its input
