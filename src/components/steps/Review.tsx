@@ -86,6 +86,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
   const [tax, setTax] = useState(toMoneyInput(initTax))
   const [tip, setTip] = useState(toMoneyInput(initTip))
   const [label, setLabel] = useState(initLabel ?? '')
+  // The row "+ Add item" just created, so it can take focus as it mounts
+  const [addedItemId, setAddedItemId] = useState<string | null>(null)
   const [currency, setCurrency] = useState(normalizeCurrency(initCurrency) ?? DEFAULT_CURRENCY)
 
   // Total is always derived — no editable state, so tip/tax/items can never diverge from total
@@ -117,7 +119,9 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
   }
 
   function addItem() {
-    setItems(prev => [...prev, blankItem()])
+    const item = blankItem()
+    setItems(prev => [...prev, item])
+    setAddedItemId(item.id)
   }
 
   function focusNextReviewInput(currentEl: HTMLElement) {
@@ -212,6 +216,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, label:
               onChange={e => updateItem(item.id, 'name', e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') focusNextReviewInput(e.currentTarget) }}
               placeholder="Item name"
+              autoFocus={item.id === addedItemId}
               aria-label="Item name"
               aria-invalid={!isEmptyRow(item) && !item.name.trim()}
               data-review-input
