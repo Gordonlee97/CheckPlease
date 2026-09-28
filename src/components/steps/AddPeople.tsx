@@ -29,6 +29,7 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
   const [savedSnapshot, setSavedSnapshot] = useState<string[] | null>(null)
   const savedGroups = useSavedGroups()
   const [showGroupPicker, setShowGroupPicker] = useState(false)
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
   // No deps: rebuilt each render so submit() always sees the current people
   useImperativeHandle(ref, () => ({ submit: () => onDone(people) }))
@@ -66,6 +67,8 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
     setPeople(p => [...p, { id: uuidv4(), name: trimmed, color }])
     setName('')
     setShowGroupPicker(false)
+    // Tapping Add or a suggestion takes focus, which closes a phone's keyboard
+    nameInputRef.current?.focus()
   }
 
   function removePerson(id: string) {
@@ -116,6 +119,7 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
 
       <div className="flex gap-2 mb-2">
         <Input
+          ref={nameInputRef}
           placeholder="Name"
           aria-label="Name of someone at the table"
           value={name}
