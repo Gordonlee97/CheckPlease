@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { v4 as uuidv4 } from 'uuid'
 import { getSavedGroup, saveGroup, deleteGroup, type GroupPerson } from '@/lib/savedGroups'
@@ -23,6 +23,7 @@ function GroupEditorContent() {
   const [groupName, setGroupName] = useState('')
   const [people, setPeople] = useState<EditablePerson[]>([])
   const [newName, setNewName] = useState('')
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const [exiting, setExiting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -50,6 +51,8 @@ function GroupEditorContent() {
       color: getPersonColor(prev.length),
     }])
     setNewName('')
+    // Tapping Add takes focus, which closes a phone's keyboard
+    nameInputRef.current?.focus()
   }
 
   function removePerson(key: string) {
@@ -125,6 +128,7 @@ function GroupEditorContent() {
         <p className="text-text-secondary text-xs uppercase tracking-widest mb-2">People</p>
         <div className="flex gap-2">
           <Input
+            ref={nameInputRef}
             placeholder="Name"
             value={newName}
             onChange={e => setNewName(e.target.value)}
