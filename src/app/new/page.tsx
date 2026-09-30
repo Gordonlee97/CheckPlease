@@ -343,6 +343,9 @@ export default function NewSplitPage() {
               <Assign
                 people={draft.people}
                 items={draft.items}
+                tax={draft.tax}
+                tip={draft.tip}
+                total={draft.total}
                 currency={draft.currency}
                 onDone={handleAssignDone}
                 onEdit={items => setDraft(d => ({ ...d, items }))}

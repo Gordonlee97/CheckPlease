@@ -6,10 +6,15 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
 import { formatMoney } from '@/lib/money'
+import { computeSplit } from '@/lib/splitting'
 
 interface Props {
   people: Person[]
   items: Item[]
+  // For the running totals, which include each person's share of tax and tip
+  tax: number
+  tip: number
+  total: number
   currency?: string
   onDone: (items: Item[]) => void
   // Fires on every assignment change so the saved draft survives a refresh
@@ -18,7 +23,7 @@ interface Props {
   onReadyChange?: (ready: boolean) => void
 }
 
-export function Assign({ people, items: initialItems, currency, onDone, onEdit, ref, onReadyChange }: Props) {
+export function Assign({ people, items: initialItems, tax, tip, total, currency, onDone, onEdit, ref, onReadyChange }: Props) {
   const [items, setItems] = useState<Item[]>(initialItems)
   const itemCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -60,6 +65,9 @@ export function Assign({ people, items: initialItems, currency, onDone, onEdit, 
   )
 
 
+  // Same maths as the Totals screen, so the figures match it once all is assigned
+  const runningTotals = computeSplit(people, items, tax, tip, total)
+
   const unassigned = items.filter(i => i.assignedTo.length === 0)
   const canContinue = unassigned.length === 0
 
@@ -83,6 +91,23 @@ export function Assign({ people, items: initialItems, currency, onDone, onEdit, 
       <p className="text-text-secondary text-sm mb-4">
         Tap names to assign. Tap multiple for a shared item.
       </p>
+
+      {/* Pinned while the list scrolls, so each tap's effect stays in view */}
+      <div
+        role="group"
+        aria-label="Running totals"
+        className="sticky top-0 z-10 -mx-6 px-6 py-2 mb-3 bg-bg/95 backdrop-blur border-b border-border flex flex-wrap gap-x-4 gap-y-1"
+      >
+        {runningTotals.map(share => {
+          const color = people.find(p => p.id === share.personId)?.color
+          return (
+            <span key={share.personId} data-testid="running-total" data-person={share.name} className="text-sm tabular-nums">
+              <span style={{ color: color ?? 'var(--color-text-secondary)' }}>{share.name}</span>{' '}
+              <span className="text-text-primary font-medium">{formatMoney(share.total, currency)}</span>
+            </span>
+          )
+        })}
+      </div>
 
       <button
         onClick={splitEqually}
