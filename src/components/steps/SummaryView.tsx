@@ -83,11 +83,14 @@ function ShareCard({ share, index, session }: ShareCardProps) {
           </p>
           {/* Venmo is USD-only; the deep link would be misleading otherwise */}
           {(normalizeCurrency(session.currency) ?? DEFAULT_CURRENCY) === DEFAULT_CURRENCY && (
+            // 44px tall to be hittable with a thumb; the pill inside stays compact
             <button
               onClick={() => window.open(venmoUrl, '_system')}
-              className="text-[11px] text-[#008CFF] hover:text-[#008CFF] transition-colors shrink-0 ml-3"
+              className="shrink-0 ml-3 min-h-11 flex items-center"
             >
-              Request on Venmo
+              <span className="rounded-full border border-[#008CFF]/50 px-3 py-1 text-xs font-medium text-[#008CFF] active:bg-[#008CFF]/15 transition-colors">
+                Request on Venmo
+              </span>
             </button>
           )}
         </div>
