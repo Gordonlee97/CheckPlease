@@ -157,6 +157,9 @@ function GroupEditorContent() {
               <span className="text-text-secondary text-sm">@</span>
               <input
                 type="text"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 placeholder="venmo handle (optional)"
                 value={person.venmoHandle ?? ''}
                 onChange={e => updateVenmo(person.key, e.target.value)}

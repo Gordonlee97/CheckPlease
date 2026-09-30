@@ -68,6 +68,9 @@ export default function Home() {
               <input
                 autoFocus
                 type="text"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 placeholder="@yourhandle"
                 value={venmoInput}
                 onChange={e => setVenmoInput(e.target.value)}

@@ -224,6 +224,9 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
                 <span className="text-text-secondary text-sm">@</span>
                 <input
                   type="text"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="venmo handle (optional)"
                   aria-label={`Venmo handle for ${person.name} (optional)`}
                   value={person.venmoHandle ?? ''}
