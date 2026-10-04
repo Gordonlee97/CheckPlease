@@ -29,7 +29,9 @@ export default function SplitsPage() {
   const hasMore = visible < sessions.length
 
   return (
-    <main className={`min-h-screen p-6 max-w-md mx-auto pb-16 ${exiting ? 'animate-page-exit' : 'animate-page-enter'}`}>
+    // The slide starts 20px right; main clips it so a phone can't widen the page to fit
+    <main className="min-h-screen max-w-md mx-auto overflow-x-clip">
+      <div className={`p-6 pb-16 ${exiting ? 'animate-page-exit' : 'animate-page-enter'}`}>
       <div className="mb-6">
         <button onClick={handleBack} className="text-text-secondary hover:text-text-primary text-sm">← Back</button>
       </div>
@@ -66,6 +68,7 @@ export default function SplitsPage() {
           )}
         </>
       )}
+      </div>
     </main>
   )
 }
