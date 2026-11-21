@@ -25,16 +25,22 @@ export function computeSplit(
 ): PersonShare[] {
   // Work in whole cents so every share of an item, and of tax and tip, adds
   // back up to exactly the amount being split.
+  // Ids of people removed after assigning can linger on items; they must not
+  // soak up a share that nobody pays.
+  const currentIds = new Set(people.map(p => p.id))
+  const payers = new Map(items.map(item => [item.id, item.assignedTo.filter(id => currentIds.has(id))]))
+
   const itemCents = new Map<string, number>() // `${itemId}:${personId}` -> cents
   items.forEach((item, itemIndex) => {
-    const n = item.assignedTo.length
+    const assignees = payers.get(item.id)!
+    const n = assignees.length
     if (n === 0) return
     const priceCents = toCents(item.price)
     const base = Math.trunc(priceCents / n)
     const extra = priceCents - base * n
     // Rotate who absorbs the leftover pennies so they spread across people
     // instead of always landing on whoever was tapped first.
-    item.assignedTo.forEach((personId, i) => {
+    assignees.forEach((personId, i) => {
       const slot = (i - itemIndex % n + n) % n
       itemCents.set(`${item.id}:${personId}`, base + (slot < Math.abs(extra) ? Math.sign(extra) : 0))
     })
@@ -59,7 +65,7 @@ export function computeSplit(
       .map(item => ({
         name: item.name,
         price: (itemCents.get(`${item.id}:${person.id}`) ?? 0) / 100,
-        shared: item.assignedTo.length > 1,
+        shared: payers.get(item.id)!.length > 1,
       }))
 
     return {

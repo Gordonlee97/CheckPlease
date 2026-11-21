@@ -35,6 +35,17 @@ function isEmpty(draft: SplitDraft): boolean {
   return draft.people.length === 0 && draft.items.length === 0
 }
 
+// Replaces the people and drops item assignments to anyone no longer listed,
+// so a removed person's id can't keep claiming a share of an item.
+export function withPeople<D extends { people: Person[]; items: Item[] }>(draft: D, people: Person[]): D {
+  const ids = new Set(people.map(p => p.id))
+  return {
+    ...draft,
+    people,
+    items: draft.items.map(item => ({ ...item, assignedTo: item.assignedTo.filter(id => ids.has(id)) })),
+  }
+}
+
 export function getDraft(): SplitDraft | null {
   const draft = readCached<SplitDraft | null>(KEY, cache, EMPTY)
   if (!draft || !Array.isArray(draft.people) || !Array.isArray(draft.items)) return null
