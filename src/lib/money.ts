@@ -36,3 +36,23 @@ export function normalizeCurrency(currency?: string | null): string | undefined 
   const code = currency.trim().toUpperCase()
   return /^[A-Z]{3}$/.test(code) ? code : undefined
 }
+
+// Reads an amount the user typed. Many regions' decimal keypads offer "," and
+// no "." — parseFloat would stop there and turn 12,50 into 12. When both marks
+// appear, the last one is the decimal point and the other groups thousands.
+// Anything that isn't fully a number is NaN, so it shows as missing rather
+// than as whatever digits it happened to start with.
+export function parseAmount(raw: string): number {
+  let s = raw.trim().replace(/\s/g, '')
+  const lastDot = s.lastIndexOf('.')
+  const lastComma = s.lastIndexOf(',')
+  if (lastDot >= 0 && lastComma >= 0) {
+    const thousands = lastComma > lastDot ? '.' : ','
+    s = s.split(thousands).join('').replace(',', '.')
+  } else if (lastComma >= 0) {
+    if (s.indexOf(',') !== lastComma) return NaN
+    s = s.replace(',', '.')
+  }
+  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(s)) return NaN
+  return Number(s)
+}
