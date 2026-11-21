@@ -1,4 +1,4 @@
-import { APIError } from '@anthropic-ai/sdk'
+import { APIError, APIConnectionError, APIConnectionTimeoutError } from '@anthropic-ai/sdk'
 import { describeScanFailure } from '../src/lib/scanErrors'
 
 function apiError(status: number, body: object, message: string) {
@@ -49,5 +49,14 @@ describe('describeScanFailure', () => {
 
   it('falls back to a generic 500 for anything else', () => {
     expect(describeScanFailure(new TypeError('boom'))).toEqual({ status: 500, error: 'Internal server error' })
+  })
+
+  // Connection drops and timeouts are APIErrors with no status code
+  it('reports a dropped connection or a timeout as busy, not an internal error', () => {
+    for (const err of [new APIConnectionError({ message: 'Connection error.' }), new APIConnectionTimeoutError()]) {
+      const failure = describeScanFailure(err)
+      expect(failure.status).toBe(503)
+      expect(failure.error).toMatch(/busy/i)
+    }
   })
 })

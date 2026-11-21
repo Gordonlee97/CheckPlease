@@ -32,6 +32,8 @@ export function describeScanFailure(err: unknown): ScanFailure {
     // Bad or missing credentials are ours to fix; don't describe them to users
     if (err.status === 401 || err.status === 403) return { status: 503, error: UNAVAILABLE }
     if (err.status !== undefined && err.status >= 500) return { status: 503, error: BUSY }
+    // No status means the request never got a response: a dropped connection or a timeout
+    if (err.status === undefined) return { status: 503, error: BUSY }
   }
   return { status: 500, error: 'Internal server error' }
 }
