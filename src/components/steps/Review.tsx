@@ -147,10 +147,13 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, receip
     }
   }
 
+  // Continuing takes complete rows only (anything else blocks it). The saved
+  // draft takes every row with something in it, so an item still waiting on
+  // its price survives a refresh or a trip Back; its price is saved as 0.
   function currentResult(onlyComplete = true): ReviewResult {
-    const rows = onlyComplete ? items.filter(isComplete) : items
+    const rows = onlyComplete ? items.filter(isComplete) : items.filter(i => !isEmptyRow(i))
     return {
-      items: rows.map(i => ({ id: i.id, name: i.name, price: parseAmount(i.priceStr), assignedTo: i.assignedTo, confidence: i.confidence })),
+      items: rows.map(i => ({ id: i.id, name: i.name, price: parseAmount(i.priceStr) || 0, assignedTo: i.assignedTo, confidence: i.confidence })),
       tax: Math.max(0, parseAmount(tax) || 0),
       tip: Math.max(0, parseAmount(tip) || 0),
       total: computedTotal,
@@ -183,7 +186,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, receip
 
   // Keep the parent's draft in step with what's typed, so a refresh keeps it
   useEffect(() => {
-    onEditRef.current?.(currentResult())
+    onEditRef.current?.(currentResult(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- currentResult reads exactly these
   }, [items, tax, tip, computedTotal, label, currency])
 
