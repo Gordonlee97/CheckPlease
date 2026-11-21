@@ -214,7 +214,7 @@ export default function NewSplitPage() {
       ...d,
       items, tax, tip, total,
       subtotal: items.reduce((sum, i) => sum + i.price, 0),
-      label: label ?? d.label,
+      label, // Review starts from d.label, so undefined here means the user cleared it
       currency,
     }))
   }
