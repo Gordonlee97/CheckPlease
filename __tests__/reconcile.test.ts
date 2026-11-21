@@ -76,4 +76,45 @@ describe('reconcileLowConfidence', () => {
     const withoutLabel = { ...azure([{ name: 'A', price: 1, confidence: 0.2 }]), label: undefined }
     expect(reconcileLowConfidence(withoutLabel, claude([{ name: 'A', price: 1 }])).label).toBe('Claude Diner')
   })
+
+  // Stripping everything outside [a-z0-9] turned every Korean or Japanese name
+  // into "", so all of them shared one price.
+  it('matches names written in other scripts by their own letters', () => {
+    const result = reconcileLowConfidence(
+      azure([{ name: '김치찌개', price: 900, confidence: 0.4 }]),
+      claude([{ name: '김치찌개', price: 9000 }, { name: '소주', price: 5000 }]),
+    )
+    expect(result.items[0].price).toBe(9000)
+  })
+
+  it('pairs repeated names in the order they appear', () => {
+    const result = reconcileLowConfidence(
+      azure([
+        { name: 'Beer', price: 2, confidence: 0.4 },
+        { name: 'Beer', price: 8, confidence: 0.99 },
+      ]),
+      claude([{ name: 'Beer', price: 6 }, { name: 'Beer', price: 8 }]),
+    )
+    expect(result.items.map(i => i.price)).toEqual([6, 8])
+  })
+
+  it('leaves a repeated name alone when the two readers list it a different number of times', () => {
+    const result = reconcileLowConfidence(
+      azure([
+        { name: 'Beer', price: 2, confidence: 0.4 },
+        { name: 'Beer', price: 6, confidence: 0.99 },
+      ]),
+      claude([{ name: 'Beer', price: 6 }]),
+    )
+    expect(result.items[0].price).toBe(2)
+    expect(result.items[0].confidence).toBe(0.4)
+  })
+
+  it('never matches a name with no letters or digits', () => {
+    const result = reconcileLowConfidence(
+      azure([{ name: '***', price: 2, confidence: 0.4 }]),
+      claude([{ name: '---', price: 50 }]),
+    )
+    expect(result.items[0].price).toBe(2)
+  })
 })

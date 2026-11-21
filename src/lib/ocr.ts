@@ -70,20 +70,45 @@ export type ClaudeReceipt = z.infer<typeof ClaudeReceiptSchema>
 // Azure reports per-item confidence; below this the price is worth a second look.
 export const LOW_CONFIDENCE = 0.8
 
+// Letters and digits in any script: [a-z0-9] alone turned every Korean or
+// Japanese name into "", so they all matched each other.
 function normalizeName(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return name.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
+}
+
+// Keys each item by its name plus how many times that name came before it,
+// so the second "Beer" on one receipt pairs with the second "Beer" on the other.
+// Names with no letters or digits get no key and never match.
+function occurrenceKeys(items: ScanResult['items']): { keys: (string | null)[]; counts: Map<string, number> } {
+  const counts = new Map<string, number>()
+  const keys = items.map(item => {
+    const name = normalizeName(item.name)
+    if (!name) return null
+    const n = counts.get(name) ?? 0
+    counts.set(name, n + 1)
+    return `${name}#${n}`
+  })
+  return { keys, counts }
 }
 
 // Azure is the primary reader but sometimes misreads an amount. When it flags
 // low confidence, Claude re-reads the same photo and its price wins for those
 // items only — everything Azure was sure about is left untouched.
 export function reconcileLowConfidence(azure: ScanResult, claude: ScanResult): ScanResult {
-  const byName = new Map(claude.items.map(item => [normalizeName(item.name), item]))
+  const azureKeys = occurrenceKeys(azure.items)
+  const claudeKeys = occurrenceKeys(claude.items)
+  const claudeByKey = new Map(claude.items.map((item, i) => [claudeKeys.keys[i], item]))
 
-  const items = azure.items.map(item => {
+  const items = azure.items.map((item, i) => {
     if (item.confidence === undefined || item.confidence >= LOW_CONFIDENCE) return item
 
-    const match = byName.get(normalizeName(item.name))
+    const key = azureKeys.keys[i]
+    if (!key) return item
+    // A name listed a different number of times can't be paired line for line
+    const name = key.slice(0, key.lastIndexOf('#'))
+    if (azureKeys.counts.get(name) !== claudeKeys.counts.get(name)) return item
+
+    const match = claudeByKey.get(key)
     if (!match) return item // nothing to compare against; leave the warning up
 
     // Agreement from two readers is as good as a confident read
