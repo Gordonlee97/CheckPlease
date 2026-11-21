@@ -23,28 +23,52 @@ export function computeSplit(
   tip: number,
   receiptTotal: number
 ): PersonShare[] {
-  const computedSubtotal = items.reduce((sum, item) => sum + item.price, 0)
+  // Work in whole cents so every share of an item, and of tax and tip, adds
+  // back up to exactly the amount being split.
+  const itemCents = new Map<string, number>() // `${itemId}:${personId}` -> cents
+  items.forEach((item, itemIndex) => {
+    const n = item.assignedTo.length
+    if (n === 0) return
+    const priceCents = toCents(item.price)
+    const base = Math.trunc(priceCents / n)
+    const extra = priceCents - base * n
+    // Rotate who absorbs the leftover pennies so they spread across people
+    // instead of always landing on whoever was tapped first.
+    item.assignedTo.forEach((personId, i) => {
+      const slot = (i - itemIndex % n + n) % n
+      itemCents.set(`${item.id}:${personId}`, base + (slot < Math.abs(extra) ? Math.sign(extra) : 0))
+    })
+  })
 
-  const shares: PersonShare[] = people.map(person => {
+  const subtotalCents = people.map(person =>
+    items.reduce((sum, item) => sum + (itemCents.get(`${item.id}:${person.id}`) ?? 0), 0)
+  )
+  // Tax and tip follow each person's share of the whole receipt. Items nobody
+  // has been assigned yet hold their portion back, so running totals on the
+  // Assign step don't charge the first person for everyone's tax.
+  const receiptItemCents = items.reduce((sum, item) => sum + toCents(item.price), 0)
+  const assignedCents = subtotalCents.reduce((a, b) => a + b, 0)
+  const weights = [...subtotalCents, Math.max(0, receiptItemCents - assignedCents)]
+  const weightTotal = weights.reduce((a, b) => a + b, 0)
+  const taxCents = allocateProportionally(toCents(tax), weights, weightTotal)
+  const tipCents = allocateProportionally(toCents(tip), weights, weightTotal)
+
+  const shares: PersonShare[] = people.map((person, p) => {
     const assignedItems: AssignedItemShare[] = items
       .filter(item => item.assignedTo.includes(person.id))
       .map(item => ({
         name: item.name,
-        price: round2(item.price / item.assignedTo.length),
+        price: (itemCents.get(`${item.id}:${person.id}`) ?? 0) / 100,
         shared: item.assignedTo.length > 1,
       }))
-
-    const itemSubtotal = assignedItems.reduce((sum, i) => sum + i.price, 0)
-    const taxShare = computedSubtotal > 0 ? (itemSubtotal / computedSubtotal) * tax : 0
-    const tipShare = computedSubtotal > 0 ? (itemSubtotal / computedSubtotal) * tip : 0
 
     return {
       personId: person.id,
       name: person.name,
-      itemSubtotal: round2(itemSubtotal),
-      taxShare: round2(taxShare),
-      tipShare: round2(tipShare),
-      total: round2(itemSubtotal + taxShare + tipShare),
+      itemSubtotal: subtotalCents[p] / 100,
+      taxShare: taxCents[p] / 100,
+      tipShare: tipCents[p] / 100,
+      total: (subtotalCents[p] + taxCents[p] + tipCents[p]) / 100,
       assignedItems,
     }
   })
@@ -67,6 +91,28 @@ export function computeSplit(
   }
 
   return shares
+}
+
+function toCents(n: number): number {
+  return Math.round(n * 100)
+}
+
+// Largest-remainder split of `amount` cents in proportion to `weights`, so the
+// parts always sum to `amount`. With no weight, nobody is charged (as before).
+function allocateProportionally(amount: number, weights: number[], weightTotal: number): number[] {
+  if (weightTotal <= 0 || amount === 0) return weights.map(() => 0)
+  const exact = weights.map(w => (amount * w) / weightTotal)
+  const parts = exact.map(x => Math.trunc(x))
+  let left = amount - parts.reduce((a, b) => a + b, 0)
+  const order = exact
+    .map((x, i) => ({ i, rem: Math.abs(x - parts[i]) }))
+    .sort((a, b) => b.rem - a.rem || a.i - b.i)
+  for (const { i } of order) {
+    if (left === 0) break
+    parts[i] += Math.sign(left)
+    left -= Math.sign(left)
+  }
+  return parts
 }
 
 function round2(n: number): number {
