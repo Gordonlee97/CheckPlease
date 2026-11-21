@@ -130,7 +130,18 @@ export async function POST(req: NextRequest) {
       console.error('[scan] azure failed, falling back to Claude:', err)
     }
     if (!result || result.items.length < 2) {
-      result = await analyzeWithClaude(base64Image)
+      // Fewer than two items may be a misread, or just a short receipt (one
+      // bottle of wine). Claude is a second opinion here: if it fails, a
+      // result Azure did get beats an error. With nothing from Azure, a
+      // Claude failure still propagates so the catch below can explain it.
+      const azureResult = result && result.items.length > 0 ? result : null
+      try {
+        result = (await analyzeWithClaude(base64Image)) ?? azureResult
+      } catch (err) {
+        if (!azureResult) throw err
+        console.error('[scan] Claude fallback failed, keeping Azure result:', err)
+        result = azureResult
+      }
     } else if (hasLowConfidenceItem(result)) {
       // Azure misread at least one amount. Have Claude re-read the same photo
       // and take its price for those items only. A failure here is not fatal:
