@@ -382,7 +382,18 @@ export default function NewSplitPage() {
               {step === 'people' && !canProceed && (
                 <p className="text-center text-text-secondary text-xs mb-3">Add at least 2 people</p>
               )}
-              {(step !== 'scan' || canProceed || !!scannedFile) && (
+              {step === 'scan' && draft.items.length > 0 ? (
+                // Back on Scan with items already read: moving on keeps them (and
+                // any edits). Rescanning would wipe them and spend a paid scan, so
+                // that only happens through an explicit Retake or Gallery.
+                <Button
+                  fullWidth
+                  onClick={handleManualEntry}
+                  disabled={!!scannedFile && !canProceed}
+                >
+                  {scannedFile && !canProceed ? 'Scanning…' : 'Review Items →'}
+                </Button>
+              ) : (step !== 'scan' || canProceed || !!scannedFile) && (
                 <Button
                   fullWidth
                   onClick={() => stepRef.current?.submit()}
