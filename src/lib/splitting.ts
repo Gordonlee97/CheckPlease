@@ -1,4 +1,5 @@
 import type { Item, Person } from './types'
+import { minorUnitScale } from './money'
 
 export interface AssignedItemShare {
   name: string
@@ -21,89 +22,86 @@ export function computeSplit(
   items: Item[],
   tax: number,
   tip: number,
-  receiptTotal: number
+  receiptTotal: number,
+  currency?: string
 ): PersonShare[] {
-  // Work in whole cents so every share of an item, and of tax and tip, adds
-  // back up to exactly the amount being split.
+  // Work in whole minor units (cents, or whole yen and won) so every share of
+  // an item, and of tax and tip, adds back up to exactly the amount being
+  // split, in the same steps the amounts are displayed in.
+  const scale = minorUnitScale(currency)
+  const toUnits = (n: number) => Math.round(n * scale)
+
   // Ids of people removed after assigning can linger on items; they must not
   // soak up a share that nobody pays.
   const currentIds = new Set(people.map(p => p.id))
   const payers = new Map(items.map(item => [item.id, item.assignedTo.filter(id => currentIds.has(id))]))
 
-  const itemCents = new Map<string, number>() // `${itemId}:${personId}` -> cents
+  const itemUnits = new Map<string, number>() // `${itemId}:${personId}` -> minor units
   items.forEach((item, itemIndex) => {
     const assignees = payers.get(item.id)!
     const n = assignees.length
     if (n === 0) return
-    const priceCents = toCents(item.price)
-    const base = Math.trunc(priceCents / n)
-    const extra = priceCents - base * n
-    // Rotate who absorbs the leftover pennies so they spread across people
+    const priceUnits = toUnits(item.price)
+    const base = Math.trunc(priceUnits / n)
+    const extra = priceUnits - base * n
+    // Rotate who absorbs the leftover units so they spread across people
     // instead of always landing on whoever was tapped first.
     assignees.forEach((personId, i) => {
       const slot = (i - itemIndex % n + n) % n
-      itemCents.set(`${item.id}:${personId}`, base + (slot < Math.abs(extra) ? Math.sign(extra) : 0))
+      itemUnits.set(`${item.id}:${personId}`, base + (slot < Math.abs(extra) ? Math.sign(extra) : 0))
     })
   })
 
-  const subtotalCents = people.map(person =>
-    items.reduce((sum, item) => sum + (itemCents.get(`${item.id}:${person.id}`) ?? 0), 0)
+  const subtotalUnits = people.map(person =>
+    items.reduce((sum, item) => sum + (itemUnits.get(`${item.id}:${person.id}`) ?? 0), 0)
   )
   // Tax and tip follow each person's share of the whole receipt. Items nobody
   // has been assigned yet hold their portion back, so running totals on the
   // Assign step don't charge the first person for everyone's tax.
-  const receiptItemCents = items.reduce((sum, item) => sum + toCents(item.price), 0)
-  const assignedCents = subtotalCents.reduce((a, b) => a + b, 0)
-  const weights = [...subtotalCents, Math.max(0, receiptItemCents - assignedCents)]
+  const receiptItemUnits = items.reduce((sum, item) => sum + toUnits(item.price), 0)
+  const assignedUnits = subtotalUnits.reduce((a, b) => a + b, 0)
+  const weights = [...subtotalUnits, Math.max(0, receiptItemUnits - assignedUnits)]
   const weightTotal = weights.reduce((a, b) => a + b, 0)
-  const taxCents = allocateProportionally(toCents(tax), weights, weightTotal)
-  const tipCents = allocateProportionally(toCents(tip), weights, weightTotal)
+  const taxUnits = allocateProportionally(toUnits(tax), weights, weightTotal)
+  const tipUnits = allocateProportionally(toUnits(tip), weights, weightTotal)
 
-  const shares: PersonShare[] = people.map((person, p) => {
+  // Only adjust for a gap of a few minor units between the parts and the
+  // printed total (OCR rounding). A larger gap means the inputs disagree, and
+  // forcing it onto someone would hide that. The gap goes on the largest
+  // share, on the first component that stays non-negative.
+  const gap = toUnits(receiptTotal) - people.reduce((sum, _, p) => sum + subtotalUnits[p] + taxUnits[p] + tipUnits[p], 0)
+  if (gap !== 0 && Math.abs(gap) <= MAX_CORRECTION_UNITS && people.length > 0) {
+    const totalOf = (p: number) => subtotalUnits[p] + taxUnits[p] + tipUnits[p]
+    const largest = people.reduce((best, _, p) => (totalOf(p) > totalOf(best) ? p : best), 0)
+    const component = [taxUnits, tipUnits, subtotalUnits].find(c => c[largest] + gap >= 0)
+    if (component) component[largest] += gap
+  }
+
+  return people.map((person, p) => {
     const assignedItems: AssignedItemShare[] = items
       .filter(item => item.assignedTo.includes(person.id))
       .map(item => ({
         name: item.name,
-        price: (itemCents.get(`${item.id}:${person.id}`) ?? 0) / 100,
+        price: (itemUnits.get(`${item.id}:${person.id}`) ?? 0) / scale,
         shared: payers.get(item.id)!.length > 1,
       }))
 
     return {
       personId: person.id,
       name: person.name,
-      itemSubtotal: subtotalCents[p] / 100,
-      taxShare: taxCents[p] / 100,
-      tipShare: tipCents[p] / 100,
-      total: (subtotalCents[p] + taxCents[p] + tipCents[p]) / 100,
+      itemSubtotal: subtotalUnits[p] / scale,
+      taxShare: taxUnits[p] / scale,
+      tipShare: tipUnits[p] / scale,
+      total: (subtotalUnits[p] + taxUnits[p] + tipUnits[p]) / scale,
       assignedItems,
     }
   })
-
-  const computedTotal = round2(shares.reduce((sum, s) => sum + s.total, 0))
-  const diff = round2(receiptTotal - computedTotal)
-  // Only adjust for penny-level discrepancies (OCR rounding). A large diff means
-  // the inputs are inconsistent; forcing it into a component creates negative values.
-  if (diff !== 0 && Math.abs(diff) <= 0.05 && shares.length > 0) {
-    const maxIdx = shares.reduce((mi, s, i, arr) => (s.total > arr[mi].total ? i : mi), 0)
-    const s = shares[maxIdx]
-    if (s.taxShare > 0) {
-      s.taxShare = round2(s.taxShare + diff)
-    } else if (s.tipShare > 0) {
-      s.tipShare = round2(s.tipShare + diff)
-    } else {
-      s.itemSubtotal = round2(s.itemSubtotal + diff)
-    }
-    s.total = round2(s.itemSubtotal + s.taxShare + s.tipShare)
-  }
-
-  return shares
 }
 
-function toCents(n: number): number {
-  return Math.round(n * 100)
-}
+// Up to 5 cents (or ¥5) of OCR rounding is absorbed; more is left visible
+const MAX_CORRECTION_UNITS = 5
 
-// Largest-remainder split of `amount` cents in proportion to `weights`, so the
+// Largest-remainder split of `amount` minor units in proportion to `weights`, so the
 // parts always sum to `amount`. With no weight, nobody is charged (as before).
 function allocateProportionally(amount: number, weights: number[], weightTotal: number): number[] {
   if (weightTotal <= 0 || amount === 0) return weights.map(() => 0)
@@ -119,8 +117,4 @@ function allocateProportionally(amount: number, weights: number[], weightTotal: 
     left -= Math.sign(left)
   }
   return parts
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100
 }

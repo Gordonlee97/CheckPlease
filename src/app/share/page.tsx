@@ -32,7 +32,7 @@ export default function SharePage() {
 
   if (!session) return null
 
-  const shares = computeSplit(session.people, session.items, session.tax, session.tip, session.total)
+  const shares = computeSplit(session.people, session.items, session.tax, session.tip, session.total, session.currency)
 
   return (
     <main className="min-h-screen p-6 pb-32 max-w-md mx-auto">

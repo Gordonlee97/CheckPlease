@@ -157,4 +157,30 @@ describe('computeSplit', () => {
     expect(g.assignedItems[0].shared).toBe(false)
     expect(result.reduce((a, r) => a + Math.round(r.total * 100), 0)).toBe(6600)
   })
+
+  // Shares were worked out to the cent even for yen and won, which have no
+  // minor unit; each ¥333.33 then displayed as ¥333 and the total as ¥999.
+  it('splits currencies without cents into whole units that add up', () => {
+    const items: Item[] = [{ id: '1', name: 'Ramen', price: 1000, assignedTo: ['g', 's', 'm'] }]
+    const result = computeSplit([gordon, sarah, mike], items, 0, 0, 1000, 'JPY')
+    expect(result.map(r => r.total).sort()).toEqual([333, 333, 334])
+    for (const r of result) expect(Number.isInteger(r.total)).toBe(true)
+  })
+
+  // The small-gap correction for OCR mismatches used to dump the whole gap
+  // on a tiny tax share and push it below zero.
+  it('never makes a share negative when correcting a small mismatch', () => {
+    const items: Item[] = [
+      { id: '1', name: 'Steak', price: 10, assignedTo: ['g'] },
+      { id: '2', name: 'Mint', price: 0.1, assignedTo: ['s'] },
+    ]
+    const result = computeSplit([gordon, sarah], items, 0.01, 0, 10.07)
+    for (const r of result) {
+      expect(r.taxShare).toBeGreaterThanOrEqual(0)
+      expect(r.tipShare).toBeGreaterThanOrEqual(0)
+      expect(r.itemSubtotal).toBeGreaterThanOrEqual(0)
+    }
+    expect(result.reduce((a, r) => a + Math.round(r.total * 100), 0)).toBe(1007)
+  })
 })
+

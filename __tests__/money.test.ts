@@ -1,4 +1,4 @@
-import { formatMoney, currencySymbol, normalizeCurrency, DEFAULT_CURRENCY } from '../src/lib/money'
+import { formatMoney, currencySymbol, normalizeCurrency, minorUnitScale, DEFAULT_CURRENCY } from '../src/lib/money'
 
 describe('formatMoney', () => {
   it('formats dollars by default, matching what the app showed before', () => {
@@ -40,3 +40,14 @@ describe('normalizeCurrency', () => {
     expect(DEFAULT_CURRENCY).toBe('USD')
   })
 })
+
+describe('minorUnitScale', () => {
+  it('counts the minor units in one major unit, as the money is displayed', () => {
+    expect(minorUnitScale('USD')).toBe(100)
+    expect(minorUnitScale('EUR')).toBe(100)
+    expect(minorUnitScale('JPY')).toBe(1)
+    expect(minorUnitScale('KRW')).toBe(1)
+    expect(minorUnitScale(undefined)).toBe(100)
+  })
+})
+

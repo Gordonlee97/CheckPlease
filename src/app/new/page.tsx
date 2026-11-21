@@ -261,7 +261,7 @@ export default function NewSplitPage() {
     total: draft.total,
   }
   const shares = step === 'summary'
-    ? computeSplit(draft.people, draft.items, draft.tax, draft.tip, draft.total)
+    ? computeSplit(draft.people, draft.items, draft.tax, draft.tip, draft.total, draft.currency)
     : []
   const { toast, sharing, shareLink, copyText } = useShareActions(session, shares)
 
