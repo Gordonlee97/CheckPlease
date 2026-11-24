@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card'
 import { useSavedNames, forgetName } from '@/lib/savedNames'
 import { getPersonColor, nextPersonColor } from '@/lib/personColors'
 import { saveGroup, useSavedGroups, type SavedGroup } from '@/lib/savedGroups'
+import { cleanVenmoHandle } from '@/lib/userSettings'
 
 interface Props {
   initialPeople?: Person[]
@@ -84,7 +85,7 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
   }
 
   function updateVenmo(id: string, raw: string) {
-    const handle = raw.replace(/^@/, '').trim()
+    const handle = cleanVenmoHandle(raw)
     setPeople(prev => prev.map(p => p.id === id ? { ...p, venmoHandle: handle || undefined } : p))
   }
 

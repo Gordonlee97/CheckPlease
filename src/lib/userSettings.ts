@@ -26,9 +26,14 @@ export function getMyVenmoHandle(): string | undefined {
   return getSettings().venmoHandle || undefined
 }
 
+// Trim first: with a leading space (pasted, or autocomplete) the "@" isn't at
+// the start yet, so stripping it before trimming left " @alice" as "@alice".
+export function cleanVenmoHandle(raw: string): string {
+  return raw.trim().replace(/^@/, '')
+}
+
 export function setMyVenmoHandle(handle: string): void {
-  const trimmed = handle.replace(/^@/, '').trim()
-  saveSettings({ ...getSettings(), venmoHandle: trimmed || undefined })
+  saveSettings({ ...getSettings(), venmoHandle: cleanVenmoHandle(handle) || undefined })
 }
 
 export function useMyVenmoHandle(): string | undefined {
