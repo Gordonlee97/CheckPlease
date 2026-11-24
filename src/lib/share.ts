@@ -54,7 +54,8 @@ export function decodeSession(encoded: string): Session | null {
 
 export function buildShareUrl(session: Session): string {
   const encoded = encodeSession(session)
-  const base = process.env.NEXT_PUBLIC_SHARE_BASE_URL || window.location.origin
+  // A configured base may end in "/"; joining it as is gave "//share"
+  const base = (process.env.NEXT_PUBLIC_SHARE_BASE_URL || window.location.origin).replace(/\/+$/, '')
   return `${base}/share#${encoded}`
 }
 
