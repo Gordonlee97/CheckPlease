@@ -36,3 +36,11 @@ export function normalizeCurrency(currency?: string | null): string | undefined 
   const code = currency.trim().toUpperCase()
   return /^[A-Z]{3}$/.test(code) ? code : undefined
 }
+
+// How many minor units make one major unit: 100 for dollars and euros, 1 for
+// yen and won. Taken from the same formatter that displays the amount, so a
+// split is worked out in exactly the steps people will see.
+export function minorUnitScale(currency?: string): number {
+  const digits = formatterFor(normalizeCurrency(currency) ?? DEFAULT_CURRENCY).resolvedOptions().maximumFractionDigits ?? 2
+  return 10 ** digits
+}

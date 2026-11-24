@@ -32,7 +32,7 @@ function HistoryContent() {
     router.replace('/')
   }
 
-  const shares = computeSplit(session.people, session.items, session.tax, session.tip, session.total)
+  const shares = computeSplit(session.people, session.items, session.tax, session.tip, session.total, session.currency)
   return (
     <main className="min-h-screen p-6 pb-32 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-6">
