@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { v4 as uuidv4 } from 'uuid'
 import { getSavedGroup, saveGroup, deleteGroup, type GroupPerson } from '@/lib/savedGroups'
 import { nextPersonColor } from '@/lib/personColors'
+import { cleanVenmoHandle } from '@/lib/userSettings'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -60,7 +61,7 @@ function GroupEditorContent() {
   }
 
   function updateVenmo(key: string, raw: string) {
-    const handle = raw.replace(/^@/, '').trim()
+    const handle = cleanVenmoHandle(raw)
     setPeople(prev => prev.map(p => p.key === key ? { ...p, venmoHandle: handle || undefined } : p))
   }
 
