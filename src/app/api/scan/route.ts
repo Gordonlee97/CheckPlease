@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import Anthropic, { AnthropicError, APIError } from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { parseAzureResponse, ClaudeReceiptSchema, claudeReceiptToScanResult, hasLowConfidenceItem, reconcileLowConfidence } from '@/lib/ocr'
 import { createScanLimiter, getClientIp, checkRateLimit } from '@/lib/rateLimit'
@@ -94,9 +94,22 @@ async function analyzeWithClaude(base64Image: string): Promise<ScanResult | null
         },
       ],
     }],
-  })
-  if (message.stop_reason === 'refusal') return null
+  }).catch(nullIfUnreadableReply)
+  if (!message || message.stop_reason === 'refusal') return null
   return claudeReceiptToScanResult(message.parsed_output)
+}
+
+// parse() validates the reply against the schema inside the call, so a
+// refusal that came with stray text, or a reply cut off at max_tokens, throws
+// before stop_reason can be checked. Either way the receipt wasn't read.
+// Any other client error (a missing key, say) is ours to fix and still throws.
+function nullIfUnreadableReply(err: unknown): null {
+  if (err instanceof AnthropicError && !(err instanceof APIError) &&
+      err.message.startsWith('Failed to parse structured output')) {
+    console.error('[scan] Claude reply was not a receipt:', err.message)
+    return null
+  }
+  throw err
 }
 
 export async function POST(req: NextRequest) {

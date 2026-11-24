@@ -24,7 +24,7 @@ jest.mock('@/lib/rateLimit', () => ({
   checkRateLimit: jest.fn(async () => ({ allowed: true })),
 }))
 
-import { APIError } from '@anthropic-ai/sdk'
+import { AnthropicError, APIError } from '@anthropic-ai/sdk'
 import { POST } from '../src/app/api/scan/route'
 import { checkRateLimit } from '@/lib/rateLimit'
 
@@ -169,6 +169,25 @@ describe('POST /api/scan', () => {
 
     expect(res.status).toBe(422)
     expect((await res.json()).error).toMatch(/could not read/i)
+  })
+
+  // parse() validates the reply itself and throws before stop_reason can be
+  // checked, so a refusal with stray text or a truncated reply used to be a 500
+  it('returns 422 when Claude replies with something that is not a receipt', async () => {
+    global.fetch = azureFetch(azureDoc([])) as unknown as typeof fetch
+    parse.mockRejectedValue(new AnthropicError('Failed to parse structured output: SyntaxError: Unexpected token'))
+
+    const res = await post(scanRequest())
+
+    expect(res.status).toBe(422)
+    expect((await res.json()).error).toMatch(/could not read/i)
+  })
+
+  it('still reports other client errors as internal, so a config problem is not hidden', async () => {
+    global.fetch = azureFetch(azureDoc([])) as unknown as typeof fetch
+    parse.mockRejectedValue(new AnthropicError('Could not resolve authentication method.'))
+
+    expect((await post(scanRequest())).status).toBe(500)
   })
 
   it('explains a spend-limit failure instead of a generic 500', async () => {
