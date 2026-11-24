@@ -183,3 +183,27 @@ describe('Review: discount lines', () => {
   })
 })
 
+// The draft is what survives a refresh or a trip Back. Leaving unfinished
+// rows out of it deleted them, including items the scan read without a price.
+describe('Review: the saved draft', () => {
+  function renderWithDraft(items: Item[]) {
+    const onEdit = jest.fn()
+    act(() => root.render(<Review items={items} tax={0} tip={0} onDone={jest.fn()} onEdit={onEdit} />))
+    return () => onEdit.mock.calls.at(-1)![0] as ReviewResult
+  }
+
+  it('keeps an item the scan read without a price', () => {
+    const latest = renderWithDraft(scanned)
+    expect(latest().items.map(i => [i.name, i.price])).toEqual([['Tacos', 12], ['Mystery item', 0]])
+  })
+
+  it('keeps a row typed so far, but not a completely empty one', () => {
+    const latest = renderWithDraft([{ id: '1', name: 'Tacos', price: 12, assignedTo: [] }])
+    act(() => [...container.querySelectorAll('button')].find(b => b.textContent?.includes('Add item'))!.click())
+    const names = [...container.querySelectorAll<HTMLInputElement>('input[aria-label="Item name"], input[placeholder="Item name"]')]
+    expect(latest().items).toHaveLength(1)
+    type(names.at(-1)!, 'Nachos')
+    expect(latest().items.map(i => [i.name, i.price])).toEqual([['Tacos', 12], ['Nachos', 0]])
+  })
+})
+
