@@ -121,8 +121,12 @@ export default function NewSplitPage() {
   // Keep the stored draft in step with what's on screen
   useEffect(() => {
     if (!hydrated || step === 'summary') return
-    // Nothing entered yet — don't leave an empty draft behind
-    if (draft.people.length === 0 && draft.items.length === 0) return
+    // Nothing entered (or everything removed): there's nothing to resume, so
+    // the last saved draft mustn't linger behind "Resume split"
+    if (draft.people.length === 0 && draft.items.length === 0) {
+      clearDraft()
+      return
+    }
     saveDraft({
       sessionId,
       createdAt,
