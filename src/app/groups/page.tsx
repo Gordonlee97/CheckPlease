@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSavedGroups } from '@/lib/savedGroups'
+import { useDraft } from '@/lib/draft'
+import { DiscardDraftPrompt } from '@/components/DiscardDraftPrompt'
 import { Card } from '@/components/ui/Card'
 import Link from 'next/link'
 
@@ -10,6 +12,9 @@ export default function GroupsPage() {
   const router = useRouter()
   const groups = useSavedGroups()
   const [exiting, setExiting] = useState(false)
+  const draft = useDraft()
+  // A group tap held back until the user agrees to discard their draft
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
 
   function handleBack() {
     setExiting(true)
@@ -40,7 +45,15 @@ export default function GroupsPage() {
         <div className="flex flex-col gap-2">
           {groups.map(group => (
             <div key={group.id} className="flex items-center gap-2">
-              <Link href={`/new?group=${group.id}`} className="flex-1 min-w-0">
+              <Link
+                href={`/new?group=${group.id}`}
+                className="flex-1 min-w-0"
+                onClick={e => {
+                  if (!draft) return
+                  e.preventDefault()
+                  setPendingHref(`/new?group=${group.id}`)
+                }}
+              >
                 <Card className="flex items-center justify-between py-3 hover:border-gold transition-colors cursor-pointer">
                   <div className="min-w-0">
                     <p className="text-text-primary font-medium">{group.name}</p>
@@ -63,6 +76,13 @@ export default function GroupsPage() {
         </div>
       )}
       </div>
+      {draft && pendingHref && (
+        <div className="fixed bottom-0 left-0 right-0 pt-10 pb-6-safe bg-gradient-to-t from-bg to-transparent pointer-events-none">
+          <div className="max-w-md mx-auto px-6 pointer-events-auto">
+            <DiscardDraftPrompt href={pendingHref} onCancel={() => setPendingHref(null)} />
+          </div>
+        </div>
+      )}
     </main>
   )
 }

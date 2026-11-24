@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { v4 as uuidv4 } from 'uuid'
 import { getSavedGroup, saveGroup, deleteGroup, type GroupPerson } from '@/lib/savedGroups'
-import { getPersonColor } from '@/lib/personColors'
+import { nextPersonColor } from '@/lib/personColors'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -48,7 +48,7 @@ function GroupEditorContent() {
     setPeople(prev => [...prev, {
       key: uuidv4(),
       name: trimmed,
-      color: getPersonColor(prev.length),
+      color: nextPersonColor(prev.map(p => p.color)),
     }])
     setNewName('')
     // Tapping Add takes focus, which closes a phone's keyboard
@@ -72,10 +72,15 @@ function GroupEditorContent() {
   function handleSave() {
     const trimmedName = groupName.trim()
     if (!trimmedName || people.length < 1) return
+    // A name typed but not yet added is still meant to be in the group
+    const pending = newName.trim()
+    const toSave = pending && !people.some(p => p.name.toLowerCase() === pending.toLowerCase())
+      ? [...people, { key: uuidv4(), name: pending, color: nextPersonColor(people.map(p => p.color)) }]
+      : people
     saveGroup({
       id: isNew ? undefined : id,
       name: trimmedName,
-      people: people.map(({ key, ...rest }) => { void key; return rest }),
+      people: toSave.map(({ key, ...rest }) => { void key; return rest }),
     })
     exit()
   }

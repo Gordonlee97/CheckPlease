@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { saveDraft, getDraft, clearDraft, type SplitDraft } from '../src/lib/draft'
+import { saveDraft, getDraft, clearDraft, withPeople, type SplitDraft } from '../src/lib/draft'
 
 const base: SplitDraft = {
   sessionId: 's1',
@@ -47,5 +47,20 @@ describe('split draft', () => {
   it('survives corrupt storage', () => {
     localStorage.setItem('checkplease:draft', '{not json')
     expect(getDraft()).toBeNull()
+  })
+})
+
+describe('withPeople', () => {
+  it('drops assignments to people who were removed', () => {
+    const draft: SplitDraft = {
+      ...base,
+      items: [
+        { id: 'i1', name: 'Tacos', price: 12, assignedTo: ['p1', 'p2'] },
+        { id: 'i2', name: 'Beer', price: 6, assignedTo: ['p2'] },
+      ],
+    }
+    const next = withPeople(draft, [{ id: 'p1', name: 'Alex' }, { id: 'p3', name: 'Jo' }])
+    expect(next.people.map(p => p.id)).toEqual(['p1', 'p3'])
+    expect(next.items.map(i => i.assignedTo)).toEqual([['p1'], []])
   })
 })

@@ -66,7 +66,7 @@ export function Assign({ people, items: initialItems, tax, tip, total, currency,
 
 
   // Same maths as the Totals screen, so the figures match it once all is assigned
-  const runningTotals = computeSplit(people, items, tax, tip, total)
+  const runningTotals = computeSplit(people, items, tax, tip, total, currency)
 
   const unassigned = items.filter(i => i.assignedTo.length === 0)
   const canContinue = unassigned.length === 0

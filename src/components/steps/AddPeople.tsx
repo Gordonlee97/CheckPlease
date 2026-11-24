@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { useSavedNames, forgetName } from '@/lib/savedNames'
-import { getPersonColor } from '@/lib/personColors'
+import { getPersonColor, nextPersonColor } from '@/lib/personColors'
 import { saveGroup, useSavedGroups, type SavedGroup } from '@/lib/savedGroups'
 
 interface Props {
@@ -31,8 +31,16 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
   const [showGroupPicker, setShowGroupPicker] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
+  // A name still in the box counts: tapping "That's Everyone" without Add
+  // would otherwise drop that person and move their share onto everyone else.
+  function peopleWithPendingName(): Person[] {
+    const trimmed = name.trim()
+    if (!trimmed || people.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) return people
+    return [...people, { id: uuidv4(), name: trimmed, color: nextPersonColor(people.map(p => p.color)) }]
+  }
+
   // No deps: rebuilt each render so submit() always sees the current people
-  useImperativeHandle(ref, () => ({ submit: () => onDone(people) }))
+  useImperativeHandle(ref, () => ({ submit: () => onDone(peopleWithPendingName()) }))
 
   useEffect(() => {
     onReadyChange?.(people.length >= 2)
@@ -63,7 +71,7 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
     const trimmed = (personName ?? name).trim()
     if (!trimmed) return
     if (people.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) return
-    const color = getPersonColor(people.length)
+    const color = nextPersonColor(people.map(p => p.color))
     setPeople(p => [...p, { id: uuidv4(), name: trimmed, color }])
     setName('')
     setShowGroupPicker(false)

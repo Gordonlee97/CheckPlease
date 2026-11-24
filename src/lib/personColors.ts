@@ -12,3 +12,10 @@ export const PERSON_COLORS = [
 export function getPersonColor(index: number): string {
   return PERSON_COLORS[index % PERSON_COLORS.length]
 }
+
+// The colour for someone joining a list: the first one nobody already has.
+// Picking by list length gave a newcomer the colour of someone still listed
+// once anyone had been removed. With every colour taken, they repeat in order.
+export function nextPersonColor(used: (string | undefined)[]): string {
+  return PERSON_COLORS.find(c => !used.includes(c)) ?? getPersonColor(used.length)
+}

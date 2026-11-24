@@ -56,3 +56,11 @@ export function parseAmount(raw: string): number {
   if (!/^-?(\d+\.?\d*|\.\d+)$/.test(s)) return NaN
   return Number(s)
 }
+
+// How many minor units make one major unit: 100 for dollars and euros, 1 for
+// yen and won. Taken from the same formatter that displays the amount, so a
+// split is worked out in exactly the steps people will see.
+export function minorUnitScale(currency?: string): number {
+  const digits = formatterFor(normalizeCurrency(currency) ?? DEFAULT_CURRENCY).resolvedOptions().maximumFractionDigits ?? 2
+  return 10 ** digits
+}

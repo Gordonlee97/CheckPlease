@@ -10,6 +10,7 @@ import { useMyVenmoHandle, setMyVenmoHandle } from '@/lib/userSettings'
 import type { Session } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { DiscardDraftPrompt } from '@/components/DiscardDraftPrompt'
 
 const GROUPS_ON_HOME = 3
 const SPLITS_ON_HOME = 3
@@ -28,7 +29,8 @@ export default function Home() {
   const [sessions, setSessions] = useState<Session[]>([])
   const groups = useSavedGroups()
   const draft = useDraft()
-  const [confirmNew, setConfirmNew] = useState(false)
+  // A link into /new held back until the user agrees to discard their draft
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
   const venmoHandle = useMyVenmoHandle() ?? ''
   const [editingVenmo, setEditingVenmo] = useState(false)
   const [venmoInput, setVenmoInput] = useState('')
@@ -119,7 +121,15 @@ export default function Home() {
               <div className="flex flex-col gap-2">
                 {recentGroups.map(group => (
                   <div key={group.id} className="flex items-center gap-2">
-                    <Link href={`/new?group=${group.id}`} className="flex-1 min-w-0">
+                    <Link
+                      href={`/new?group=${group.id}`}
+                      className="flex-1 min-w-0"
+                      onClick={e => {
+                        if (!draft) return
+                        e.preventDefault()
+                        setPendingHref(`/new?group=${group.id}`)
+                      }}
+                    >
                       <Card className="flex items-center justify-between py-3 hover:border-gold transition-colors cursor-pointer">
                         <div className="min-w-0">
                           <p className="text-text-primary font-medium">{group.name}</p>
@@ -189,20 +199,10 @@ export default function Home() {
 
       <div className="fixed bottom-0 left-0 right-0 pt-10 pb-6-safe bg-gradient-to-t from-bg to-transparent pointer-events-none">
         <div className="max-w-md mx-auto px-6 pointer-events-auto">
-          {draft && confirmNew ? (
-            <div className="flex flex-col gap-2 animate-fade-in">
-              <p className="text-center text-text-secondary text-xs">
-                Starting fresh discards your unfinished split.
-              </p>
-              <div className="flex gap-3">
-                <Link href="/new" className="flex-1" onClick={() => setConfirmNew(false)}>
-                  <Button fullWidth>Start fresh</Button>
-                </Link>
-                <Button fullWidth variant="ghost" onClick={() => setConfirmNew(false)}>Keep it</Button>
-              </div>
-            </div>
+          {draft && pendingHref ? (
+            <DiscardDraftPrompt href={pendingHref} onCancel={() => setPendingHref(null)} />
           ) : draft ? (
-            <Button fullWidth onClick={() => setConfirmNew(true)}>+ New Split</Button>
+            <Button fullWidth onClick={() => setPendingHref('/new')}>+ New Split</Button>
           ) : (
             <Link href="/new">
               <Button fullWidth>+ New Split</Button>

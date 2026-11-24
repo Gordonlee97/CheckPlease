@@ -7,7 +7,7 @@ import type { Person, Item, ScanResult, Step } from '@/lib/types'
 import { saveSession } from '@/lib/storage'
 import { recordNames } from '@/lib/savedNames'
 import { getSavedGroup } from '@/lib/savedGroups'
-import { getDraft, saveDraft, clearDraft } from '@/lib/draft'
+import { getDraft, saveDraft, clearDraft, withPeople } from '@/lib/draft'
 import { useShareActions } from '@/hooks/useShareActions'
 import { AddPeople } from '@/components/steps/AddPeople'
 import { Scan } from '@/components/steps/Scan'
@@ -105,7 +105,7 @@ export default function NewSplitPage() {
           color: gp.color,
           venmoHandle: gp.venmoHandle,
         }))
-        setDraft(d => ({ ...d, people }))
+        setDraft(d => withPeople(d, people))
         setCanProceed(people.length >= 2)
         setAddPeopleKey(k => k + 1) // remount AddPeople with new initialPeople
       }
@@ -169,7 +169,7 @@ export default function NewSplitPage() {
 
   function handlePeopleDone(people: Person[]) {
     recordNames(people.map(p => p.name))
-    setDraft(d => ({ ...d, people }))
+    setDraft(d => withPeople(d, people))
     markCompleted('people')
     navigate('scan')
   }
@@ -261,7 +261,7 @@ export default function NewSplitPage() {
     total: draft.total,
   }
   const shares = step === 'summary'
-    ? computeSplit(draft.people, draft.items, draft.tax, draft.tip, draft.total)
+    ? computeSplit(draft.people, draft.items, draft.tax, draft.tip, draft.total, draft.currency)
     : []
   const { toast, sharing, shareLink, copyText } = useShareActions(session, shares)
 
@@ -310,7 +310,7 @@ export default function NewSplitPage() {
                 key={addPeopleKey}
                 initialPeople={draft.people}
                 onDone={handlePeopleDone}
-                onEdit={people => setDraft(d => ({ ...d, people }))}
+                onEdit={people => setDraft(d => withPeople(d, people))}
                 ref={stepRef}
                 onReadyChange={setCanProceed}
               />
@@ -382,7 +382,18 @@ export default function NewSplitPage() {
               {step === 'people' && !canProceed && (
                 <p className="text-center text-text-secondary text-xs mb-3">Add at least 2 people</p>
               )}
-              {(step !== 'scan' || canProceed || !!scannedFile) && (
+              {step === 'scan' && draft.items.length > 0 ? (
+                // Back on Scan with items already read: moving on keeps them (and
+                // any edits). Rescanning would wipe them and spend a paid scan, so
+                // that only happens through an explicit Retake or Gallery.
+                <Button
+                  fullWidth
+                  onClick={handleManualEntry}
+                  disabled={!!scannedFile && !canProceed}
+                >
+                  {scannedFile && !canProceed ? 'Scanning…' : 'Review Items →'}
+                </Button>
+              ) : (step !== 'scan' || canProceed || !!scannedFile) && (
                 <Button
                   fullWidth
                   onClick={() => stepRef.current?.submit()}

@@ -91,4 +91,96 @@ describe('computeSplit', () => {
       }
     }
   })
+
+  describe('totals always add up to the receipt', () => {
+    const cents = (n: number) => Math.round(n * 100)
+    const sumTotals = (r: { total: number }[]) => r.reduce((acc, x) => acc + cents(x.total), 0)
+
+    it('split equally on many items does not lose cents', () => {
+      // 6 x $10 split 3 ways: rounding each share to 3.33 used to total $59.94
+      const items: Item[] = Array.from({ length: 6 }, (_, i) => ({
+        id: String(i), name: `Dish ${i}`, price: 10, assignedTo: ['g', 's', 'm'],
+      }))
+      const result = computeSplit([gordon, sarah, mike], items, 0, 0, 60)
+      expect(sumTotals(result)).toBe(6000)
+      // Leftover pennies are spread around, not all dumped on one person
+      for (const r of result) expect(r.total).toBe(20)
+    })
+
+    it('several shared items plus tax and tip still sum exactly', () => {
+      const items: Item[] = [
+        { id: '1', name: 'A', price: 10, assignedTo: ['g', 's', 'm'] },
+        { id: '2', name: 'B', price: 7, assignedTo: ['g', 's', 'm'] },
+        { id: '3', name: 'C', price: 11.11, assignedTo: ['g', 's', 'm'] },
+        { id: '4', name: 'D', price: 5, assignedTo: ['s', 'm'] },
+        { id: '5', name: 'E', price: 0.1, assignedTo: ['g', 's', 'm'] },
+      ]
+      // subtotal 33.21, tax 2.99, tip 6.65
+      const result = computeSplit([gordon, sarah, mike], items, 2.99, 6.65, 42.85)
+      expect(sumTotals(result)).toBe(4285)
+      expect(result.reduce((a, r) => a + cents(r.taxShare), 0)).toBe(299)
+      expect(result.reduce((a, r) => a + cents(r.tipShare), 0)).toBe(665)
+    })
+
+    it("each person's item lines add up to their item subtotal", () => {
+      const items: Item[] = Array.from({ length: 4 }, (_, i) => ({
+        id: String(i), name: `Dish ${i}`, price: 10, assignedTo: ['g', 's', 'm'],
+      }))
+      const result = computeSplit([gordon, sarah, mike], items, 0, 0, 40)
+      for (const r of result) {
+        expect(r.assignedItems.reduce((a, i) => a + cents(i.price), 0)).toBe(cents(r.itemSubtotal))
+      }
+    })
+  })
+
+  it('mid-assignment, tax and tip only cover the items assigned so far', () => {
+    const items: Item[] = [
+      { id: '1', name: 'Burger', price: 10, assignedTo: ['g'] },
+      { id: '2', name: 'Salad', price: 10, assignedTo: [] },
+    ]
+    const result = computeSplit([gordon, sarah], items, 2, 4, 26)
+    const g = result.find(r => r.personId === 'g')!
+    expect(g.taxShare).toBe(1)
+    expect(g.tipShare).toBe(2)
+    expect(g.total).toBe(13)
+  })
+
+  it('ignores assignments to people no longer in the split', () => {
+    // Bob was removed after assigning; his id is still on the shared item
+    const items: Item[] = [
+      { id: '1', name: 'Shared', price: 30, assignedTo: ['g', 'bob'] },
+      { id: '2', name: 'Pasta', price: 30, assignedTo: ['s'] },
+    ]
+    const result = computeSplit([gordon, sarah], items, 6, 0, 66)
+    const g = result.find(r => r.personId === 'g')!
+    expect(g.itemSubtotal).toBe(30)
+    expect(g.assignedItems[0].shared).toBe(false)
+    expect(result.reduce((a, r) => a + Math.round(r.total * 100), 0)).toBe(6600)
+  })
+
+  // Shares were worked out to the cent even for yen and won, which have no
+  // minor unit; each ¥333.33 then displayed as ¥333 and the total as ¥999.
+  it('splits currencies without cents into whole units that add up', () => {
+    const items: Item[] = [{ id: '1', name: 'Ramen', price: 1000, assignedTo: ['g', 's', 'm'] }]
+    const result = computeSplit([gordon, sarah, mike], items, 0, 0, 1000, 'JPY')
+    expect(result.map(r => r.total).sort()).toEqual([333, 333, 334])
+    for (const r of result) expect(Number.isInteger(r.total)).toBe(true)
+  })
+
+  // The small-gap correction for OCR mismatches used to dump the whole gap
+  // on a tiny tax share and push it below zero.
+  it('never makes a share negative when correcting a small mismatch', () => {
+    const items: Item[] = [
+      { id: '1', name: 'Steak', price: 10, assignedTo: ['g'] },
+      { id: '2', name: 'Mint', price: 0.1, assignedTo: ['s'] },
+    ]
+    const result = computeSplit([gordon, sarah], items, 0.01, 0, 10.07)
+    for (const r of result) {
+      expect(r.taxShare).toBeGreaterThanOrEqual(0)
+      expect(r.tipShare).toBeGreaterThanOrEqual(0)
+      expect(r.itemSubtotal).toBeGreaterThanOrEqual(0)
+    }
+    expect(result.reduce((a, r) => a + Math.round(r.total * 100), 0)).toBe(1007)
+  })
 })
+
