@@ -130,6 +130,37 @@ describe('POST /api/scan', () => {
     expect(global.fetch).not.toHaveBeenCalled()
   })
 
+  // A one-item receipt (a single bottle of wine) is read fine by Azure; the
+  // fallback is only a second opinion, so its failure mustn't discard that.
+  describe('when Azure found one item and the Claude fallback fails', () => {
+    it('returns the Azure result if Claude errors', async () => {
+      global.fetch = azureFetch(azureDoc([['House red', 42]])) as unknown as typeof fetch
+      parse.mockRejectedValue(APIError.generate(
+        429,
+        { type: 'error', error: { type: 'rate_limit_error', message: 'cap', details: { error_code: 'enforced_spend_limit_reached' } } },
+        'cap',
+        new Headers(),
+      ))
+
+      const res = await post(scanRequest())
+
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.label).toBe('Azure Diner')
+      expect(body.items.map((i: { name: string }) => i.name)).toEqual(['House red'])
+    })
+
+    it('returns the Azure result if Claude refuses', async () => {
+      global.fetch = azureFetch(azureDoc([['House red', 42]])) as unknown as typeof fetch
+      parse.mockResolvedValue({ stop_reason: 'refusal', parsed_output: null })
+
+      const res = await post(scanRequest())
+
+      expect(res.status).toBe(200)
+      expect((await res.json()).label).toBe('Azure Diner')
+    })
+  })
+
   it('returns 422 when Claude refuses', async () => {
     global.fetch = azureFetch(azureDoc([])) as unknown as typeof fetch
     parse.mockResolvedValue({ stop_reason: 'refusal', parsed_output: null })
