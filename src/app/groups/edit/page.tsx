@@ -72,10 +72,15 @@ function GroupEditorContent() {
   function handleSave() {
     const trimmedName = groupName.trim()
     if (!trimmedName || people.length < 1) return
+    // A name typed but not yet added is still meant to be in the group
+    const pending = newName.trim()
+    const toSave = pending && !people.some(p => p.name.toLowerCase() === pending.toLowerCase())
+      ? [...people, { key: uuidv4(), name: pending, color: getPersonColor(people.length) }]
+      : people
     saveGroup({
       id: isNew ? undefined : id,
       name: trimmedName,
-      people: people.map(({ key, ...rest }) => { void key; return rest }),
+      people: toSave.map(({ key, ...rest }) => { void key; return rest }),
     })
     exit()
   }

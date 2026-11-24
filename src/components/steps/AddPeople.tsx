@@ -31,8 +31,16 @@ export function AddPeople({ initialPeople, onDone, onEdit, ref, onReadyChange }:
   const [showGroupPicker, setShowGroupPicker] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
+  // A name still in the box counts: tapping "That's Everyone" without Add
+  // would otherwise drop that person and move their share onto everyone else.
+  function peopleWithPendingName(): Person[] {
+    const trimmed = name.trim()
+    if (!trimmed || people.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) return people
+    return [...people, { id: uuidv4(), name: trimmed, color: getPersonColor(people.length) }]
+  }
+
   // No deps: rebuilt each render so submit() always sees the current people
-  useImperativeHandle(ref, () => ({ submit: () => onDone(people) }))
+  useImperativeHandle(ref, () => ({ submit: () => onDone(peopleWithPendingName()) }))
 
   useEffect(() => {
     onReadyChange?.(people.length >= 2)
