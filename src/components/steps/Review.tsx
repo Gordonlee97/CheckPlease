@@ -37,8 +37,15 @@ function selectAll(e: FocusEvent<HTMLInputElement>) {
   e.currentTarget.select()
 }
 
+// A negative price is a discount or comp line, which lowers the bill; only a
+// missing or zero price means the scan didn't read an amount.
+function hasPrice(item: ItemInput): boolean {
+  const price = parseAmount(item.priceStr)
+  return Number.isFinite(price) && price !== 0
+}
+
 function isComplete(item: ItemInput): boolean {
-  return Boolean(item.name.trim()) && parseAmount(item.priceStr) > 0
+  return Boolean(item.name.trim()) && hasPrice(item)
 }
 
 // Currencies offered in the override. The detected one is added if missing.
@@ -102,10 +109,11 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, receip
 
   const hasLowConfidence = items.some(i => i.confidence !== undefined && i.confidence < 0.8)
 
-  function formatCurrency(val: string): string {
+  // Tax and tip are never negative; item prices can be (discount lines)
+  function formatCurrency(val: string, allowNegative = false): string {
     const num = parseAmount(val)
     if (isNaN(num)) return val
-    return Math.max(0, num).toFixed(2)
+    return (allowNegative ? num : Math.max(0, num)).toFixed(2)
   }
 
   function updateItem(id: string, field: 'name' | 'priceStr', value: string) {
@@ -117,7 +125,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, receip
   }
 
   function formatItem(id: string) {
-    setItems(prev => prev.map(item => item.id === id ? { ...item, priceStr: formatCurrency(item.priceStr) } : item))
+    setItems(prev => prev.map(item => item.id === id ? { ...item, priceStr: formatCurrency(item.priceStr, true) } : item))
   }
 
   function removeItem(id: string) {
@@ -159,7 +167,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, receip
   // A half-filled row means the scan missed something. Silently dropping it
   // would quietly remove money from the split, so it blocks instead.
   const incomplete = items.filter(i => !isEmptyRow(i) && !isComplete(i))
-  const missingPrice = incomplete.filter(i => !(parseAmount(i.priceStr) > 0)).length
+  const missingPrice = incomplete.filter(i => !hasPrice(i)).length
   const missingName = incomplete.length - missingPrice
   const canContinue = incomplete.length === 0 && items.some(isComplete)
 
@@ -236,7 +244,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, receip
                 value={item.priceStr}
                 placeholder="0.00"
                 aria-label={item.name.trim() ? `Price for ${item.name.trim()}` : 'Item price'}
-                aria-invalid={!isEmptyRow(item) && !(parseAmount(item.priceStr) > 0)}
+                aria-invalid={!isEmptyRow(item) && !hasPrice(item)}
                 onChange={e => updateItem(item.id, 'priceStr', e.target.value)}
                 onFocus={selectAll}
                 onBlur={() => formatItem(item.id)}

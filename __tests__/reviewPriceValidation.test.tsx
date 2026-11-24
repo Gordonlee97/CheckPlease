@@ -145,3 +145,41 @@ describe('Review: currency', () => {
     expect(container.textContent).toContain('£')
   })
 })
+
+// A comp or happy-hour line lowers the bill. Clamping it to 0 or blocking on
+// it made people delete it, so the group overpaid by that amount.
+describe('Review: discount lines', () => {
+  const withDiscount: Item[] = [
+    { id: '1', name: 'Tacos', price: 30, assignedTo: [] },
+    { id: '2', name: 'Happy hour', price: -10, assignedTo: [] },
+  ]
+
+  it('keeps a scanned negative line and lets the user continue', () => {
+    const { onDone, onReadyChange, ref } = render(withDiscount)
+    expect(priceInputs()[0 + 1].value).toBe('-10.00')
+    expect(ready(onReadyChange)).toBe(true)
+    act(() => ref.current!.submit())
+    const result = onDone.mock.calls[0][0] as ReviewResult
+    expect(result.items.map(i => i.price)).toEqual([30, -10])
+    expect(result.total).toBe(20)
+  })
+
+  it('does not clamp a typed negative price to zero', () => {
+    render(withDiscount)
+    const discount = priceInputs()[1]
+    act(() => discount.focus())
+    type(discount, '-5')
+    act(() => discount.blur())
+    expect(discount.value).toBe('-5.00')
+  })
+
+  it('still clamps tax and tip, which are never negative', () => {
+    render(withDiscount)
+    const tax = priceInputs().at(-2)!
+    act(() => tax.focus())
+    type(tax, '-3')
+    act(() => tax.blur())
+    expect(tax.value).toBe('0.00')
+  })
+})
+
