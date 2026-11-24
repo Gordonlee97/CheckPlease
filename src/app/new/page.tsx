@@ -57,6 +57,10 @@ export default function NewSplitPage() {
   const [createdAt, setCreatedAt] = useState(() => new Date().toISOString())
   const [scannedFile, setScannedFile] = useState<File | null>(null)
   const [canProceed, setCanProceed] = useState(false)
+  // Saving to history on Done: a ref so two quick taps can't both start a save
+  const savingRef = useRef(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(false)
   // Nothing is persisted until the stored draft (if any) has been consumed,
   // so an empty first render can't wipe it.
   const [hydrated, setHydrated] = useState(false)
@@ -243,7 +247,21 @@ export default function NewSplitPage() {
       tip: draft.tip,
       total: draft.total,
     }
-    await saveSession(session)
+    if (savingRef.current) return
+    savingRef.current = true
+    setSaving(true)
+    setSaveError(false)
+    try {
+      await saveSession(session)
+    } catch (err) {
+      // Storage can be full or blocked. The draft is untouched, so nothing is
+      // lost: say so and let Done be tried again.
+      console.error('[summary] saving to history failed:', err)
+      savingRef.current = false
+      setSaving(false)
+      setSaveError(true)
+      return
+    }
     clearDraft() // it lives in history now
     router.push('/')
   }
@@ -375,7 +393,12 @@ export default function NewSplitPage() {
                 <Button fullWidth onClick={shareLink} disabled={sharing}>Share link</Button>
                 <Button fullWidth variant="ghost" onClick={copyText} disabled={sharing}>Copy text</Button>
               </div>
-              <Button fullWidth variant="green" onClick={handleSummaryDone}>Done</Button>
+              {saveError && (
+                <p role="alert" className="text-center text-red-400 text-xs">
+                  Couldn&apos;t save this split to history. It&apos;s still here — share it, or tap Done to try again.
+                </p>
+              )}
+              <Button fullWidth variant="green" onClick={handleSummaryDone} disabled={saving}>Done</Button>
             </div>
           ) : (
             <>
