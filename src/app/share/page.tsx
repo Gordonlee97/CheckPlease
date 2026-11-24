@@ -11,15 +11,18 @@ export default function SharePage() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect --
-       window.location.hash doesn't exist during prerender, so decoding it in
-       render would desync hydration. One-time read, not derived state. */
-    const hash = window.location.hash.slice(1)
-    if (!hash) { setError(true); return }
-    const decoded = decodeSession(hash)
-    if (!decoded) { setError(true); return }
-    setSession(decoded)
-    /* eslint-enable react-hooks/set-state-in-effect */
+    // window.location.hash doesn't exist during prerender, so decoding it in
+    // render would desync hydration. Read on mount, and again whenever the
+    // hash changes: opening another share link in a tab already on /share
+    // changes only the hash, which doesn't remount this page.
+    function readHash() {
+      const decoded = decodeSession(window.location.hash.slice(1))
+      setSession(decoded)
+      setError(!decoded)
+    }
+    readHash()
+    window.addEventListener('hashchange', readHash)
+    return () => window.removeEventListener('hashchange', readHash)
   }, [])
 
   if (error) {
