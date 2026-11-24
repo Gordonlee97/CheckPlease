@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { readCached, notifyStoreChanged, subscribeToStore } from './localStorageStore'
+import { readCached, writeStored, isPlainObject, subscribeToStore } from './localStorageStore'
 
 const KEY = 'checkplease:user-settings'
 
@@ -13,13 +13,11 @@ const EMPTY: UserSettings = {}
 const cache = { raw: null as string | null, value: EMPTY }
 
 function getSettings(): UserSettings {
-  return readCached(KEY, cache, EMPTY)
+  return readCached(KEY, cache, EMPTY, isPlainObject)
 }
 
 function saveSettings(settings: UserSettings): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(KEY, JSON.stringify(settings))
-  notifyStoreChanged()
+  writeStored(KEY, settings)
 }
 
 export function getMyVenmoHandle(): string | undefined {

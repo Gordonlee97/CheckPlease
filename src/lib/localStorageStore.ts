@@ -31,16 +31,47 @@ interface Cached<T> {
 // Returns the parsed value for `key`, re-parsing only when the stored string
 // has changed. Correct even when something outside these modules writes or
 // clears localStorage, since the raw string is checked every read.
-export function readCached<T>(key: string, cache: Cached<T>, empty: T): T {
+//
+// Stored data is outside the app's control (an older version, another app on
+// the origin, a hand edit), so anything that doesn't parse or fails `isValid`
+// reads as `empty`. Blocked storage, where reading itself throws, does too.
+export function readCached<T>(key: string, cache: Cached<T>, empty: T, isValid: (value: unknown) => boolean = () => true): T {
   if (typeof window === 'undefined') return empty
-  const raw = localStorage.getItem(key)
+  let raw: string | null
+  try {
+    raw = localStorage.getItem(key)
+  } catch {
+    return empty
+  }
   if (raw !== cache.raw) {
     cache.raw = raw
     try {
-      cache.value = raw ? JSON.parse(raw) as T : empty
+      const parsed: unknown = raw ? JSON.parse(raw) : empty
+      cache.value = isValid(parsed) ? parsed as T : empty
     } catch {
       cache.value = empty
     }
   }
   return cache.value
 }
+
+// Writes `value` as JSON, or removes the key for null. Storage can be full or
+// blocked; losing a saved list or draft is better than a crashed tap, so the
+// failure is logged and reported rather than thrown.
+export function writeStored(key: string, value: unknown): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    if (value === null) localStorage.removeItem(key)
+    else localStorage.setItem(key, JSON.stringify(value))
+    return true
+  } catch (err) {
+    console.warn(`[storage] could not write ${key}:`, err)
+    return false
+  } finally {
+    notifyStoreChanged()
+  }
+}
+
+export const isArray = (value: unknown): boolean => Array.isArray(value)
+export const isPlainObject = (value: unknown): boolean =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
