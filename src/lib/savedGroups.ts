@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { readCached, notifyStoreChanged, subscribeToStore } from './localStorageStore'
+import { readCached, writeStored, isArray, subscribeToStore } from './localStorageStore'
 
 const KEY = 'checkplease:saved-groups'
 
@@ -23,12 +23,11 @@ const EMPTY: SavedGroup[] = []
 const cache = { raw: null as string | null, value: EMPTY }
 
 export function getSavedGroups(): SavedGroup[] {
-  return readCached(KEY, cache, EMPTY)
+  return readCached(KEY, cache, EMPTY, isArray)
 }
 
 function write(groups: SavedGroup[]): void {
-  localStorage.setItem(KEY, JSON.stringify(groups))
-  notifyStoreChanged()
+  writeStored(KEY, groups)
 }
 
 export function getSavedGroup(id: string): SavedGroup | null {

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { readCached, notifyStoreChanged, subscribeToStore } from './localStorageStore'
+import { readCached, writeStored, isPlainObject, subscribeToStore } from './localStorageStore'
 import type { Item, Person, Step } from './types'
 
 const KEY = 'checkplease:draft'
@@ -47,21 +47,17 @@ export function withPeople<D extends { people: Person[]; items: Item[] }>(draft:
 }
 
 export function getDraft(): SplitDraft | null {
-  const draft = readCached<SplitDraft | null>(KEY, cache, EMPTY)
+  const draft = readCached<SplitDraft | null>(KEY, cache, EMPTY, isPlainObject)
   if (!draft || !Array.isArray(draft.people) || !Array.isArray(draft.items)) return null
   return isEmpty(draft) ? null : draft
 }
 
 export function saveDraft(draft: SplitDraft): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(KEY, JSON.stringify(draft))
-  notifyStoreChanged()
+  writeStored(KEY, draft)
 }
 
 export function clearDraft(): void {
-  if (typeof window === 'undefined') return
-  localStorage.removeItem(KEY)
-  notifyStoreChanged()
+  writeStored(KEY, null)
 }
 
 export function useDraft(): SplitDraft | null {

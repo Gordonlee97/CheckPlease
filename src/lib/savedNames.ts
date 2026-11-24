@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { readCached, notifyStoreChanged, subscribeToStore } from './localStorageStore'
+import { readCached, writeStored, isArray, subscribeToStore } from './localStorageStore'
 
 const KEY = 'checkplease:saved-names'
 
@@ -14,12 +14,11 @@ const EMPTY: SavedName[] = []
 const cache = { raw: null as string | null, value: EMPTY }
 
 export function getSavedNames(): SavedName[] {
-  return readCached(KEY, cache, EMPTY)
+  return readCached(KEY, cache, EMPTY, isArray)
 }
 
 function write(names: SavedName[]): void {
-  localStorage.setItem(KEY, JSON.stringify(names))
-  notifyStoreChanged()
+  writeStored(KEY, names)
 }
 
 export function recordNames(names: string[]): void {
