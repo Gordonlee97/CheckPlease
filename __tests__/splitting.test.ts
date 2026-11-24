@@ -144,4 +144,17 @@ describe('computeSplit', () => {
     expect(g.tipShare).toBe(2)
     expect(g.total).toBe(13)
   })
+
+  it('ignores assignments to people no longer in the split', () => {
+    // Bob was removed after assigning; his id is still on the shared item
+    const items: Item[] = [
+      { id: '1', name: 'Shared', price: 30, assignedTo: ['g', 'bob'] },
+      { id: '2', name: 'Pasta', price: 30, assignedTo: ['s'] },
+    ]
+    const result = computeSplit([gordon, sarah], items, 6, 0, 66)
+    const g = result.find(r => r.personId === 'g')!
+    expect(g.itemSubtotal).toBe(30)
+    expect(g.assignedItems[0].shared).toBe(false)
+    expect(result.reduce((a, r) => a + Math.round(r.total * 100), 0)).toBe(6600)
+  })
 })

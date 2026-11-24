@@ -7,7 +7,7 @@ import type { Person, Item, ScanResult, Step } from '@/lib/types'
 import { saveSession } from '@/lib/storage'
 import { recordNames } from '@/lib/savedNames'
 import { getSavedGroup } from '@/lib/savedGroups'
-import { getDraft, saveDraft, clearDraft } from '@/lib/draft'
+import { getDraft, saveDraft, clearDraft, withPeople } from '@/lib/draft'
 import { useShareActions } from '@/hooks/useShareActions'
 import { AddPeople } from '@/components/steps/AddPeople'
 import { Scan } from '@/components/steps/Scan'
@@ -105,7 +105,7 @@ export default function NewSplitPage() {
           color: gp.color,
           venmoHandle: gp.venmoHandle,
         }))
-        setDraft(d => ({ ...d, people }))
+        setDraft(d => withPeople(d, people))
         setCanProceed(people.length >= 2)
         setAddPeopleKey(k => k + 1) // remount AddPeople with new initialPeople
       }
@@ -169,7 +169,7 @@ export default function NewSplitPage() {
 
   function handlePeopleDone(people: Person[]) {
     recordNames(people.map(p => p.name))
-    setDraft(d => ({ ...d, people }))
+    setDraft(d => withPeople(d, people))
     markCompleted('people')
     navigate('scan')
   }
@@ -310,7 +310,7 @@ export default function NewSplitPage() {
                 key={addPeopleKey}
                 initialPeople={draft.people}
                 onDone={handlePeopleDone}
-                onEdit={people => setDraft(d => ({ ...d, people }))}
+                onEdit={people => setDraft(d => withPeople(d, people))}
                 ref={stepRef}
                 onReadyChange={setCanProceed}
               />
