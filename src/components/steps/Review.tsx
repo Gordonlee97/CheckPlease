@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
-import { currencySymbol, formatMoney, normalizeCurrency, DEFAULT_CURRENCY } from '@/lib/money'
+import { currencySymbol, formatMoney, normalizeCurrency, parseAmount, DEFAULT_CURRENCY } from '@/lib/money'
 
 interface ItemInput {
   id: string
@@ -38,7 +38,7 @@ function selectAll(e: FocusEvent<HTMLInputElement>) {
 }
 
 function isComplete(item: ItemInput): boolean {
-  return Boolean(item.name.trim()) && parseFloat(item.priceStr) > 0
+  return Boolean(item.name.trim()) && parseAmount(item.priceStr) > 0
 }
 
 // Currencies offered in the override. The detected one is added if missing.
@@ -93,8 +93,8 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, receip
   const [currency, setCurrency] = useState(normalizeCurrency(initCurrency) ?? DEFAULT_CURRENCY)
 
   // Total is always derived — no editable state, so tip/tax/items can never diverge from total
-  const itemsSum = items.reduce((sum, i) => sum + (parseFloat(i.priceStr) || 0), 0)
-  const computedTotal = itemsSum + Math.max(0, parseFloat(tax) || 0) + Math.max(0, parseFloat(tip) || 0)
+  const itemsSum = items.reduce((sum, i) => sum + (parseAmount(i.priceStr) || 0), 0)
+  const computedTotal = itemsSum + Math.max(0, parseAmount(tax) || 0) + Math.max(0, parseAmount(tip) || 0)
 
   // A missed or misread line is the costliest scan error, and the subtotal is
   // what exposes it. It only warns: the receipt itself may be the one that's off.
@@ -103,7 +103,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, receip
   const hasLowConfidence = items.some(i => i.confidence !== undefined && i.confidence < 0.8)
 
   function formatCurrency(val: string): string {
-    const num = parseFloat(val)
+    const num = parseAmount(val)
     if (isNaN(num)) return val
     return Math.max(0, num).toFixed(2)
   }
@@ -142,9 +142,9 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, receip
   function currentResult(onlyComplete = true): ReviewResult {
     const rows = onlyComplete ? items.filter(isComplete) : items
     return {
-      items: rows.map(i => ({ id: i.id, name: i.name, price: parseFloat(i.priceStr), assignedTo: i.assignedTo, confidence: i.confidence })),
-      tax: Math.max(0, parseFloat(tax) || 0),
-      tip: Math.max(0, parseFloat(tip) || 0),
+      items: rows.map(i => ({ id: i.id, name: i.name, price: parseAmount(i.priceStr), assignedTo: i.assignedTo, confidence: i.confidence })),
+      tax: Math.max(0, parseAmount(tax) || 0),
+      tip: Math.max(0, parseAmount(tip) || 0),
       total: computedTotal,
       label: label.trim() || undefined,
       currency,
@@ -159,7 +159,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, receip
   // A half-filled row means the scan missed something. Silently dropping it
   // would quietly remove money from the split, so it blocks instead.
   const incomplete = items.filter(i => !isEmptyRow(i) && !isComplete(i))
-  const missingPrice = incomplete.filter(i => !(parseFloat(i.priceStr) > 0)).length
+  const missingPrice = incomplete.filter(i => !(parseAmount(i.priceStr) > 0)).length
   const missingName = incomplete.length - missingPrice
   const canContinue = incomplete.length === 0 && items.some(isComplete)
 
@@ -236,7 +236,7 @@ export function Review({ items: initialItems, tax: initTax, tip: initTip, receip
                 value={item.priceStr}
                 placeholder="0.00"
                 aria-label={item.name.trim() ? `Price for ${item.name.trim()}` : 'Item price'}
-                aria-invalid={!isEmptyRow(item) && !(parseFloat(item.priceStr) > 0)}
+                aria-invalid={!isEmptyRow(item) && !(parseAmount(item.priceStr) > 0)}
                 onChange={e => updateItem(item.id, 'priceStr', e.target.value)}
                 onFocus={selectAll}
                 onBlur={() => formatItem(item.id)}

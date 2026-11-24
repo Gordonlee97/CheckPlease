@@ -93,4 +93,21 @@ describe('Review: money fields', () => {
     act(() => { field('Tip').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })) })
     expect(document.activeElement).not.toBe(field('Tip'))
   })
+
+  it('reads a comma typed as the decimal point', () => {
+    const { onDone, ref } = render(0, 0)
+    const price = container.querySelector<HTMLInputElement>('input[aria-label^="Price for"]')!
+    act(() => price.focus())
+    type(price, '12,50')
+    act(() => price.blur())
+    act(() => field('Tax').focus())
+    type(field('Tax'), '8,25')
+    act(() => field('Tax').blur())
+    expect(price.value).toBe('12.50')
+    expect(field('Tax').value).toBe('8.25')
+    act(() => ref.current!.submit())
+    const result = onDone.mock.calls[0][0] as ReviewResult
+    expect(result.items[0].price).toBe(12.5)
+    expect(result.tax).toBe(8.25)
+  })
 })
