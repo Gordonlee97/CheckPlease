@@ -8,6 +8,15 @@ import type { ScanResult } from '@/lib/types'
 
 export const maxDuration = 60
 
+// Vercel stops the function at maxDuration, which reaches the diner as a bare
+// 504. Every step is planned to finish within this budget instead, leaving a
+// margin to send the response.
+const SCAN_BUDGET_MS = (maxDuration - 5) * 1000
+// Azure may use up to this much, so the Claude fallback still has time to run
+const AZURE_BUDGET_MS = 30_000
+// A Claude recheck isn't worth starting with less time than this left
+const MIN_RECHECK_MS = 15_000
+
 const AZURE_API_VERSION = '2024-11-30'
 const AZURE_MODEL = 'prebuilt-receipt'
 
@@ -36,7 +45,7 @@ export async function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) })
 }
 
-async function analyzeWithAzure(base64Image: string): Promise<ScanResult | null> {
+async function analyzeWithAzure(base64Image: string, giveUpAt: number): Promise<ScanResult | null> {
   const endpoint = process.env.AZURE_DI_ENDPOINT?.replace(/\/$/, '')
   const key = process.env.AZURE_DI_KEY
   if (!endpoint || !key) return null
@@ -60,6 +69,11 @@ async function analyzeWithAzure(base64Image: string): Promise<ScanResult | null>
   // Poll until succeeded (exponential backoff, ~20 iterations)
   for (let i = 0; i < 20; i++) {
     const delay = Math.min(300 * Math.pow(1.4, i), 2000)
+    // Out of Azure's share of the time: Claude reads it instead
+    if (Date.now() + delay > giveUpAt) {
+      console.error('[scan] Azure still running at its time limit, falling back to Claude')
+      return null
+    }
     await new Promise(r => setTimeout(r, delay))
     const pollRes = await fetch(operationUrl, {
       headers: { 'Ocp-Apim-Subscription-Key': key },
@@ -72,7 +86,7 @@ async function analyzeWithAzure(base64Image: string): Promise<ScanResult | null>
   return null
 }
 
-async function analyzeWithClaude(base64Image: string): Promise<ScanResult | null> {
+async function analyzeWithClaude(base64Image: string, deadline: number): Promise<ScanResult | null> {
   const message = await anthropic.beta.messages.parse({
     model: 'claude-opus-5',
     max_tokens: 16000,
@@ -94,6 +108,12 @@ async function analyzeWithClaude(base64Image: string): Promise<ScanResult | null
         },
       ],
     }],
+  }, {
+    // Only the time left before the function is stopped. A timeout surfaces
+    // as a connection error (503 busy, or Azure's result where there is one);
+    // a retry couldn't finish in time anyway.
+    timeout: Math.max(1, deadline - Date.now()),
+    maxRetries: 0,
   }).catch(nullIfUnreadableReply)
   if (!message || message.stop_reason === 'refusal') return null
   return claudeReceiptToScanResult(message.parsed_output)
@@ -115,6 +135,7 @@ function nullIfUnreadableReply(err: unknown): null {
 export async function POST(req: NextRequest) {
   const origin = req.headers.get('origin')
   const headers = corsHeaders(origin)
+  const deadline = Date.now() + SCAN_BUDGET_MS
 
   try {
     const rate = await checkRateLimit(scanLimiter, getClientIp(req.headers))
@@ -138,7 +159,7 @@ export async function POST(req: NextRequest) {
     // A Claude failure does propagate, so the catch below can explain it.
     let result: ScanResult | null = null
     try {
-      result = await analyzeWithAzure(base64Image)
+      result = await analyzeWithAzure(base64Image, Date.now() + AZURE_BUDGET_MS)
     } catch (err) {
       console.error('[scan] azure failed, falling back to Claude:', err)
     }
@@ -149,18 +170,19 @@ export async function POST(req: NextRequest) {
       // Claude failure still propagates so the catch below can explain it.
       const azureResult = result && result.items.length > 0 ? result : null
       try {
-        result = (await analyzeWithClaude(base64Image)) ?? azureResult
+        result = (await analyzeWithClaude(base64Image, deadline)) ?? azureResult
       } catch (err) {
         if (!azureResult) throw err
         console.error('[scan] Claude fallback failed, keeping Azure result:', err)
         result = azureResult
       }
-    } else if (hasLowConfidenceItem(result)) {
+    } else if (hasLowConfidenceItem(result) && deadline - Date.now() >= MIN_RECHECK_MS) {
       // Azure misread at least one amount. Have Claude re-read the same photo
       // and take its price for those items only. A failure here is not fatal:
-      // Azure's result still stands, with its warnings intact.
+      // Azure's result still stands, with its warnings intact. Without time
+      // for a recheck, those warnings are what the diner gets.
       try {
-        const second = await analyzeWithClaude(base64Image)
+        const second = await analyzeWithClaude(base64Image, deadline)
         if (second) result = reconcileLowConfidence(result, second)
       } catch (err) {
         console.error('[scan] low-confidence recheck failed, keeping Azure result:', err)
